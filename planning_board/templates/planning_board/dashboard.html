@@ -1,0 +1,109 @@
+{% extends 'planning_board/base.html' %}
+
+{% block title %}Dashboard - Planning Board{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-12">
+        <h1 class="mb-4">Production Planning Dashboard</h1>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-4">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ total_boards }}</h4>
+                        <p class="mb-0">Total Planning Boards</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clipboard-list fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ total_production_lines }}</h4>
+                        <p class="mb-0">Production Lines</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-industry fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4>{{ recent_boards.count }}</h4>
+                        <p class="mb-0">Recent Boards</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clock fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Recent Planning Boards</h5>
+                <a href="{% url 'planning_board:create' %}" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus"></i> Create New
+                </a>
+            </div>
+            <div class="card-body">
+                {% if recent_boards %}
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Title</th>
+                                    <th>Meeting Time</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for board in recent_boards %}
+                                    <tr>
+                                        <td>{{ board.today_date }}</td>
+                                        <td>{{ board.title|truncatechars:50 }}</td>
+                                        <td>{{ board.meeting_time|default:"-" }}</td>
+                                        <td>{{ board.created_at|date:"M d, Y H:i" }}</td>
+                                        <td>
+                                            <a href="{% url 'planning_board:detail' board.pk %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i> View
+                                            </a>
+                                            <a href="{% url 'planning_board:edit' board.pk %}" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-edit"></i> Edit
+                                            </a>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="text-muted">No planning boards found. <a href="{% url 'planning_board:create' %}">Create your first one</a> or <a href="{% url 'planning_board:excel_upload' %}">upload an Excel file</a>.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

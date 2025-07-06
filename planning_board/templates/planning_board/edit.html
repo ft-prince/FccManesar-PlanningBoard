@@ -1,0 +1,137 @@
+{% extends 'planning_board/base.html' %}
+
+{% block title %}Edit Planning Board{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Edit Planning Board</h1>
+    <div>
+        <a href="{% url 'planning_board:export_excel' board.pk %}" class="btn btn-success">
+            <i class="fas fa-download"></i> Export to Excel
+        </a>
+        <a href="{% url 'planning_board:detail' board.pk %}" class="btn btn-secondary">
+            <i class="fas fa-eye"></i> View
+        </a>
+    </div>
+</div>
+
+<form method="post" id="planning-board-form">
+    {% csrf_token %}
+    
+    <!-- Basic Information -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Basic Information</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.title.id_for_label }}" class="form-label">Title</label>
+                        {{ form.title }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.meeting_time.id_for_label }}" class="form-label">Meeting Time</label>
+                        {{ form.meeting_time }}
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.today_date.id_for_label }}" class="form-label">Today's Date</label>
+                        {{ form.today_date }}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.tomorrow_date.id_for_label }}" class="form-label">Tomorrow's Date</label>
+                        {{ form.tomorrow_date }}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.next_day_date.id_for_label }}" class="form-label">Next Day Date</label>
+                        {{ form.next_day_date }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Production Lines -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Production Lines</h5>
+            <button type="button" class="btn btn-sm btn-primary" onclick="addFormsetRow('production')">
+                <i class="fas fa-plus"></i> Add Line
+            </button>
+        </div>
+        <div class="card-body">
+            {{ production_formset.management_form }}
+            <div id="production-formset">
+                {% for form in production_formset %}
+                    <div class="formset-row mb-3">
+                        {% if form.instance.pk %}{{ form.id }}{% endif %}
+                        <div class="row">
+                            <div class="col-md-2">
+                                <label class="form-label">Line Number</label>
+                                {{ form.line_number }}
+                            </div>
+                            <div class="col-md-10">
+                                <div class="row">
+                                    <div class="col-12"><strong>A Shift</strong></div>
+                                    <div class="col-md-2">{{ form.a_shift_model }}</div>
+                                    <div class="col-md-1">{{ form.a_shift_plan }}</div>
+                                    <div class="col-md-1">{{ form.a_shift_actual }}</div>
+                                    <div class="col-md-1">{{ form.a_shift_plan_change }}</div>
+                                    <div class="col-md-2">{{ form.a_shift_time }}</div>
+                                    <div class="col-md-5">{{ form.a_shift_remarks }}</div>
+                                </div>
+                                <!-- Similar structure for B and C shifts -->
+                            </div>
+                        </div>
+                        {% if form.DELETE %}
+                            <div class="form-check delete-checkbox">
+                                {{ form.DELETE }} Delete this line
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Save Button -->
+    <div class="d-grid gap-2 d-md-flex justify-content-md-end mb-4">
+        <a href="{% url 'planning_board:detail' board.pk %}" class="btn btn-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+            <i class="fas fa-save"></i> Save Changes
+        </button>
+    </div>
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function addFormsetRow(formsetType) {
+    // AJAX call to get new form HTML
+    $.post('{% url "planning_board:ajax_add_production_line" %}', {
+        'board_id': {{ board.pk }},
+        'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+    }, function(data) {
+        if (data.form_html) {
+            $('#' + formsetType + '-formset').append(data.form_html);
+            updateFormsetManagement(formsetType);
+        }
+    });
+}
+
+function updateFormsetManagement(formsetType) {
+    let totalForms = $('#' + formsetType + '-formset .formset-row').length;
+    $('#id_' + formsetType + '_set-TOTAL_FORMS').val(totalForms);
+}
+</script>
+{% endblock %}

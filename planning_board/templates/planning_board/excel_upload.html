@@ -1,0 +1,42 @@
+{% extends 'planning_board/base.html' %}
+
+{% block title %}Upload Excel - Planning Board{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Upload Planning Board Excel File</h5>
+            </div>
+            <div class="card-body">
+                <p class="text-muted">Upload an Excel file with the planning board format to automatically populate the data.</p>
+                
+                <form method="post" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="{{ form.file.id_for_label }}" class="form-label">Excel File</label>
+                        {{ form.file }}
+                        {% if form.file.errors %}
+                            <div class="text-danger">
+                                {% for error in form.file.errors %}
+                                    <small>{{ error }}</small>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">Supported formats: .xlsx, .xls (Max size: 10MB)</div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'planning_board:dashboard' %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-upload"></i> Upload & Process
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

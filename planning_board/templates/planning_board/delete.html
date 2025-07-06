@@ -1,0 +1,45 @@
+{% extends 'planning_board/base.html' %}
+
+{% block title %}Delete Planning Board{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">Delete Planning Board</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Warning:</strong> This action cannot be undone!
+                </div>
+                
+                <p>Are you sure you want to delete the following planning board?</p>
+                
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <h6 class="card-title">{{ board.title }}</h6>
+                        <p class="card-text">
+                            <strong>Date:</strong> {{ board.today_date|date:"M d, Y" }}<br>
+                            <strong>Created:</strong> {{ board.created_at|date:"M d, Y H:i" }}<br>
+                            <strong>Production Lines:</strong> {{ board.production_lines.count }}<br>
+                            <strong>Total Plans:</strong> {{ board.tomorrow_plans.count|add:board.next_day_plans.count }}
+                        </p>
+                    </div>
+                </div>
+                
+                <form method="post" class="mt-4">
+                    {% csrf_token %}
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'planning_board:detail' board.pk %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash"></i> Yes, Delete
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

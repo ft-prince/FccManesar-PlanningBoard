@@ -1,0 +1,99 @@
+{% extends 'planning_board/base.html' %}
+
+{% block title %}Create Planning Board{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Create New Planning Board</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.title.id_for_label }}" class="form-label">Title</label>
+                                {{ form.title }}
+                                {% if form.title.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.title.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.meeting_time.id_for_label }}" class="form-label">Meeting Time</label>
+                                {{ form.meeting_time }}
+                                {% if form.meeting_time.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.meeting_time.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.today_date.id_for_label }}" class="form-label">Today's Date</label>
+                                {{ form.today_date }}
+                                {% if form.today_date.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.today_date.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.tomorrow_date.id_for_label }}" class="form-label">Tomorrow's Date</label>
+                                {{ form.tomorrow_date }}
+                                {% if form.tomorrow_date.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.tomorrow_date.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="{{ form.next_day_date.id_for_label }}" class="form-label">Next Day Date</label>
+                                {{ form.next_day_date }}
+                                {% if form.next_day_date.errors %}
+                                    <div class="text-danger">
+                                        {% for error in form.next_day_date.errors %}
+                                            <small>{{ error }}</small>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'planning_board:list' %}" class="btn btn-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Create Planning Board
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

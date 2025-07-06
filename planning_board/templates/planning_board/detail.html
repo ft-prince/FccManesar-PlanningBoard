@@ -1,0 +1,330 @@
+{% extends 'planning_board/base.html' %}
+
+{% block title %}Planning Board Details{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>Planning Board Details</h1>
+    <div>
+        <a href="{% url 'planning_board:edit' board.pk %}" class="btn btn-primary">
+            <i class="fas fa-edit"></i> Edit
+        </a>
+        <a href="{% url 'planning_board:export_excel' board.pk %}" class="btn btn-success">
+            <i class="fas fa-download"></i> Export Excel
+        </a>
+        <a href="{% url 'planning_board:list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back to List
+        </a>
+    </div>
+</div>
+
+<!-- Basic Information -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Basic Information</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>Title:</strong> {{ board.title }}</p>
+                <p><strong>Meeting Time:</strong> {{ board.meeting_time|default:"Not set" }}</p>
+            </div>
+            <div class="col-md-6">
+                <p><strong>Created by:</strong> {{ board.created_by.username }}</p>
+                <p><strong>Created on:</strong> {{ board.created_at|date:"M d, Y H:i" }}</p>
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4">
+                <p><strong>Today's Date:</strong> {{ board.today_date|date:"M d, Y" }}</p>
+            </div>
+            <div class="col-md-4">
+                <p><strong>Tomorrow's Date:</strong> {{ board.tomorrow_date|date:"M d, Y" }}</p>
+            </div>
+            <div class="col-md-4">
+                <p><strong>Next Day Date:</strong> {{ board.next_day_date|date:"M d, Y" }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Production Lines -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Production Lines ({{ board.production_lines.count }})</h5>
+    </div>
+    <div class="card-body">
+        {% if board.production_lines.exists %}
+            <div class="table-responsive">
+                <table class="table table-sm planning-board-table">
+                    <thead class="table-dark">
+                        <tr>
+                            <th rowspan="2">Line Number</th>
+                            <th colspan="6" class="text-center">A Shift</th>
+                            <th colspan="6" class="text-center">B Shift</th>
+                            <th colspan="5" class="text-center">C Shift</th>
+                        </tr>
+                        <tr>
+                            <!-- A Shift -->
+                            <th>Model</th><th>Plan</th><th>Actual</th><th>Change</th><th>Time</th><th>Remarks</th>
+                            <!-- B Shift -->
+                            <th>Model</th><th>Plan</th><th>Actual</th><th>Change</th><th>Time</th><th>Remarks</th>
+                            <!-- C Shift -->
+                            <th>Model</th><th>Plan</th><th>Actual</th><th>Change</th><th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for line in board.production_lines.all %}
+                            <tr>
+                                <td class="line-header">{{ line.line_number }}</td>
+                                <!-- A Shift -->
+                                <td>{{ line.a_shift_model|default:"-" }}</td>
+                                <td>{{ line.a_shift_plan|default:"-" }}</td>
+                                <td>{{ line.a_shift_actual|default:"-" }}</td>
+                                <td>{{ line.a_shift_plan_change|default:"-" }}</td>
+                                <td>{{ line.a_shift_time|default:"-" }}</td>
+                                <td>{{ line.a_shift_remarks|default:"-" }}</td>
+                                <!-- B Shift -->
+                                <td>{{ line.b_shift_model|default:"-" }}</td>
+                                <td>{{ line.b_shift_plan|default:"-" }}</td>
+                                <td>{{ line.b_shift_actual|default:"-" }}</td>
+                                <td>{{ line.b_shift_plan_change|default:"-" }}</td>
+                                <td>{{ line.b_shift_time|default:"-" }}</td>
+                                <td>{{ line.b_shift_remarks|default:"-" }}</td>
+                                <!-- C Shift -->
+                                <td>{{ line.c_shift_model|default:"-" }}</td>
+                                <td>{{ line.c_shift_plan|default:"-" }}</td>
+                                <td>{{ line.c_shift_actual|default:"-" }}</td>
+                                <td>{{ line.c_shift_plan_change|default:"-" }}</td>
+                                <td>{{ line.c_shift_remarks|default:"-" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">No production lines defined.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Tomorrow Plans -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Tomorrow Assembly Plans ({{ board.tomorrow_plans.count }})</h5>
+    </div>
+    <div class="card-body">
+        {% if board.tomorrow_plans.exists %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>A Shift</th>
+                            <th>B Shift</th>
+                            <th>C Shift</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for plan in board.tomorrow_plans.all %}
+                            <tr>
+                                <td>{{ plan.model }}</td>
+                                <td>{{ plan.a_shift|default:"-" }}</td>
+                                <td>{{ plan.b_shift|default:"-" }}</td>
+                                <td>{{ plan.c_shift|default:"-" }}</td>
+                                <td>{{ plan.remarks|default:"-" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">No tomorrow plans defined.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Next Day Plans -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Next Day Assembly Plans ({{ board.next_day_plans.count }})</h5>
+    </div>
+    <div class="card-body">
+        {% if board.next_day_plans.exists %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Model</th>
+                            <th>A Shift</th>
+                            <th>B Shift</th>
+                            <th>C Shift</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for plan in board.next_day_plans.all %}
+                            <tr>
+                                <td>{{ plan.model }}</td>
+                                <td>{{ plan.a_shift|default:"-" }}</td>
+                                <td>{{ plan.b_shift|default:"-" }}</td>
+                                <td>{{ plan.c_shift|default:"-" }}</td>
+                                <td>{{ plan.remarks|default:"-" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">No next day plans defined.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Critical Parts -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Critical Part Status ({{ board.critical_parts.count }})</h5>
+    </div>
+    <div class="card-body">
+        {% if board.critical_parts.exists %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Part Name</th>
+                            <th>Supplier</th>
+                            <th>Plan Qty</th>
+                            <th>Receiving Time</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for part in board.critical_parts.all %}
+                            <tr>
+                                <td>{{ part.part_name }}</td>
+                                <td>{{ part.supplier }}</td>
+                                <td>{{ part.plan_qty }}</td>
+                                <td>{{ part.receiving_time|default:"-" }}</td>
+                                <td>{{ part.remarks|default:"-" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">No critical parts defined.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- AFM Plans -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">AFM Plans ({{ board.afm_plans.count }})</h5>
+    </div>
+    <div class="card-body">
+        {% if board.afm_plans.exists %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Part Name</th>
+                            <th>Part Number</th>
+                            <th>Plan Qty</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for plan in board.afm_plans.all %}
+                            <tr>
+                                <td><span class="badge bg-secondary">{{ plan.get_plan_type_display }}</span></td>
+                                <td>{{ plan.part_name }}</td>
+                                <td>{{ plan.part_number|default:"-" }}</td>
+                                <td>{{ plan.plan_qty }}</td>
+                                <td>{{ plan.remarks|default:"-" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">No AFM plans defined.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- SPD Plans -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">SPD Plans (Customer-wise) ({{ board.spd_plans.count }})</h5>
+    </div>
+    <div class="card-body">
+        {% if board.spd_plans.exists %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th>Part Name</th>
+                            <th>Part Number</th>
+                            <th>Plan Qty</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for plan in board.spd_plans.all %}
+                            <tr>
+                                <td><span class="badge bg-primary">{{ plan.get_customer_display }}</span></td>
+                                <td>{{ plan.part_name }}</td>
+                                <td>{{ plan.part_number|default:"-" }}</td>
+                                <td>{{ plan.plan_qty }}</td>
+                                <td>{{ plan.remarks|default:"-" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">No SPD plans defined.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Other Information -->
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">Other Information ({{ board.other_info.count }})</h5>
+    </div>
+    <div class="card-body">
+        {% if board.other_info.exists %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>Part Name</th>
+                            <th>Quantity</th>
+                            <th>Target Date</th>
+                            <th>Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for info in board.other_info.all %}
+                            <tr>
+                                <td>{{ info.part_name }}</td>
+                                <td>{{ info.qty }}</td>
+                                <td>{{ info.target_date|date:"M d, Y" }}</td>
+                                <td>{{ info.remarks|default:"-" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="text-muted">No other information defined.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
