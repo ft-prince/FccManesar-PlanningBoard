@@ -1,4 +1,4 @@
-# views.py - Fixed version with proper Excel processing
+# views.py - Complete fixed version with proper Excel processing
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -162,10 +162,12 @@ def excel_upload(request):
     return render(request, 'planning_board/excel_upload.html', {'form': form})
 
 def process_excel_file(file_path, board):
-    """Process uploaded Excel file and populate database"""
+    """Process uploaded Excel file and populate database - enhanced version"""
     try:
         workbook = openpyxl.load_workbook(file_path, data_only=True)
         worksheet = workbook.active
+        
+        print(f"Processing Excel file with {worksheet.max_row} rows and {worksheet.max_column} columns")
         
         # Extract basic information
         extract_basic_info(worksheet, board)
@@ -173,12 +175,17 @@ def process_excel_file(file_path, board):
         # Extract production lines data
         extract_production_lines(worksheet, board)
         
-        # Extract other data sections
+        # Extract future planning data  
         extract_future_plans(worksheet, board)
+        
+        # Extract additional sections using enhanced approach
+        extract_additional_sections(worksheet, board)
         
         return True
     except Exception as e:
         print(f"Error processing Excel file: {e}")
+        import traceback
+        traceback.print_exc()
         return False
 
 def extract_basic_info(worksheet, board):
@@ -209,9 +216,9 @@ def extract_production_lines(worksheet, board):
     try:
         # Define production lines and their starting row positions
         line_configs = [
-            {'name': 'CLUTCH ASSY LINE-1', 'start_row': 7, 'max_rows': 5},
-            {'name': 'CLUTCH ASSY LINE-2', 'start_row': 13, 'max_rows': 5},
-            {'name': 'PULLEY ASSY LINE-1', 'start_row': 19, 'max_rows': 2},
+            {'name': 'CLUTCH ASSY LINE-3', 'start_row': 16, 'max_rows': 5},
+            {'name': 'CLUTCH ASSY LINE-2', 'start_row': 10, 'max_rows': 5},
+            {'name': 'PULLEY ASSY LINE-1', 'start_row': 7, 'max_rows': 2},
             {'name': 'FMD/FFD', 'start_row': 22, 'max_rows': 3},
             {'name': 'NEW BUSINESS', 'start_row': 26, 'max_rows': 5},
         ]
@@ -222,6 +229,38 @@ def extract_production_lines(worksheet, board):
     except Exception as e:
         print(f"Error extracting production lines: {e}")
 
+def extract_single_production_line(worksheet, board, config):
+    """Extract data for a single production line with multiple entries"""
+    try:
+        line_name = config['name']
+        start_row = config['start_row']
+        max_rows = config.get('max_rows', 5)
+        
+        # Track all data entries for this production line
+        line_entries = []
+        
+        # Scan through all possible rows for this production line
+        for row_offset in range(max_rows):
+            current_row = start_row + row_offset
+            
+            # Check if this row has any meaningful data
+            row_data = extract_row_data(worksheet, current_row)
+            
+            if has_meaningful_data(row_data):
+                line_entries.append(row_data)
+        
+        # Create production line entries
+        if line_entries:
+            create_production_line_entries(board, line_name, line_entries)
+        else:
+            # Create empty production line if no data found
+            ProductionLine.objects.create(
+                planning_board=board,
+                line_number=line_name
+            )
+            
+    except Exception as e:
+        print(f"Error extracting line {config['name']}: {e}")
 
 def extract_row_data(worksheet, row):
     """Extract all data from a single row"""
@@ -231,8 +270,8 @@ def extract_row_data(worksheet, row):
             'a_shift': {
                 'model': get_cell_value(worksheet, row, 3),       # Column C
                 'plan': get_numeric_value(worksheet, row, 4),     # Column D
-                'actual': get_numeric_value(worksheet, row, 5),   # Column E
                 'plan_change': get_numeric_value(worksheet, row, 6), # Column F
+                'actual': get_numeric_value(worksheet, row, 5),   # Column E
                 'time': get_time_value(worksheet, row, 7),        # Column G
                 'remarks': get_cell_value(worksheet, row, 8),     # Column H
             },
@@ -240,8 +279,8 @@ def extract_row_data(worksheet, row):
             'b_shift': {
                 'model': get_cell_value(worksheet, row, 9),       # Column I
                 'plan': get_numeric_value(worksheet, row, 10),    # Column J
-                'actual': get_numeric_value(worksheet, row, 11),  # Column K
                 'plan_change': get_numeric_value(worksheet, row, 12), # Column L
+                'actual': get_numeric_value(worksheet, row, 11),  # Column K
                 'time': get_time_value(worksheet, row, 13),       # Column M
                 'remarks': get_cell_value(worksheet, row, 14),    # Column N
             },
@@ -251,8 +290,8 @@ def extract_row_data(worksheet, row):
                 'plan': get_numeric_value(worksheet, row, 16),    # Column P
                 'actual': get_numeric_value(worksheet, row, 17),  # Column Q
                 'plan_change': get_numeric_value(worksheet, row, 18), # Column R
-                'time': get_time_value(worksheet, row, 19),       # Column S
-                'remarks': get_cell_value(worksheet, row, 20),    # Column T
+                # 'time': get_time_value(worksheet, row, 19),       # Column S
+                'remarks': get_cell_value(worksheet, row, 19),    # Column T
             }
         }
     except Exception as e:
@@ -354,38 +393,23 @@ def get_time_value(worksheet, row, col):
     except:
         return None
 
-def extract_single_production_line(worksheet, board, config):
-    """Extract data for a single production line with multiple entries"""
+def extract_future_plans(worksheet, board):
+    """Extract tomorrow and next day plans - improved version"""
     try:
-        line_name = config['name']
-        start_row = config['start_row']
-        max_rows = config.get('max_rows', 5)
+        # Tomorrow plans - scan more comprehensively
+        extract_plan_section(worksheet, board, 'tomorrow', 
+                            start_col=21, model_col=21, 
+                            a_shift_col=22, b_shift_col=23, c_shift_col=24, 
+                            remarks_col=25)
         
-        # Track all data entries for this production line
-        line_entries = []
-        
-        # Scan through all possible rows for this production line
-        for row_offset in range(max_rows):
-            current_row = start_row + row_offset
-            
-            # Check if this row has any meaningful data
-            row_data = extract_row_data(worksheet, current_row)
-            
-            if has_meaningful_data(row_data):
-                line_entries.append(row_data)
-        
-        # Create production line entries
-        if line_entries:
-            create_production_line_entries(board, line_name, line_entries)
-        else:
-            # Create empty production line if no data found
-            ProductionLine.objects.create(
-                planning_board=board,
-                line_number=line_name
-            )
-            
+        # Next day plans
+        extract_plan_section(worksheet, board, 'next_day', 
+                            start_col=26, model_col=26, 
+                            a_shift_col=27, b_shift_col=28, c_shift_col=29, 
+                            remarks_col=30)
+                
     except Exception as e:
-        print(f"Error extracting line {config['name']}: {e}")
+        print(f"Error extracting future plans: {e}")
 
 def extract_plan_section(worksheet, board, plan_type, start_col, model_col, 
                         a_shift_col, b_shift_col, c_shift_col, remarks_col):
@@ -433,37 +457,234 @@ def extract_plan_section(worksheet, board, plan_type, start_col, model_col,
                 
     except Exception as e:
         print(f"Error extracting {plan_type} plans: {e}")
+
 def extract_additional_sections(worksheet, board):
-    """Extract additional sections like Critical Parts, AFM, SPD, etc."""
+    """Extract additional sections like Critical Parts, AFM, SPD, etc. - FIXED"""
     try:
-        # Find and extract Critical Parts section
-        extract_critical_parts(worksheet, board)
+        print("Starting to extract additional sections...")
         
-        # Find and extract AFM Plans section
-        extract_afm_plans(worksheet, board)
+        # Look for section keywords and their positions
+        critical_row = find_section_header(worksheet, "CRITICAL")
+        fcin_row = find_section_header(worksheet, "FCIN")
+        iu_row = find_section_header(worksheet, "I/U")
+        msil_row = find_section_header(worksheet, "MSIL")
+        hmsi_row = find_section_header(worksheet, "HMSI")
+        iymp_row = find_section_header(worksheet, "IYM")
+        hmcl_row = find_section_header(worksheet, "HMCL")
+        other_row = find_section_header(worksheet, "OTHER")
         
-        # Find and extract SPD Plans section
-        extract_spd_plans(worksheet, board)
+        # Extract sections with proper data filtering
+        if critical_row:
+            extract_critical_parts_fixed(worksheet, board, critical_row)
         
-        # Find and extract Other Information section
-        extract_other_information(worksheet, board)
+        if fcin_row:
+            extract_afm_plans_fixed(worksheet, board, fcin_row, "FCIN")
+            
+        if iu_row:
+            extract_afm_plans_fixed(worksheet, board, iu_row, "IU")
+        
+        if msil_row:
+            extract_spd_plans_fixed(worksheet, board, msil_row, "MSIL")
+            
+        if hmsi_row:
+            extract_spd_plans_fixed(worksheet, board, hmsi_row, "HMSI")
+            
+        if iymp_row:
+            extract_spd_plans_fixed(worksheet, board, iymp_row, "IYM")
+            
+        if hmcl_row:
+            extract_spd_plans_fixed(worksheet, board, hmcl_row, "HMCL")
+        
+        if other_row:
+            extract_other_information_fixed(worksheet, board, other_row)
         
     except Exception as e:
         print(f"Error extracting additional sections: {e}")
+        import traceback
+        traceback.print_exc()
+
+def extract_critical_parts_fixed(worksheet, board, start_row):
+    """Extract critical parts - FIXED to skip headers and get real data"""
+    try:
+        print(f"Extracting critical parts from row {start_row}")
         
+        # Start from start_row + 2 to skip header row
+        for row in range(start_row + 2, start_row + 22):
+            part_name = get_cell_value(worksheet, row, 2)    # Column B
+            supplier = get_cell_value(worksheet, row, 3)     # Column C  
+            plan_qty = get_numeric_value(worksheet, row, 4)  # Column D
+            receiving_time_str = get_cell_value(worksheet, row, 5) # Column E
+            remarks = get_cell_value(worksheet, row, 6)      # Column F
+            
+            # Skip if no part name or empty
+            if not part_name or not part_name.strip():
+                continue
+                
+            # Skip header rows explicitly
+            if part_name.upper() in ['PART NAME', 'PART', 'NAME', 'SUPPLIER', 'QTY', 'QUANTITY']:
+                print(f"Skipping critical parts header: {part_name}")
+                continue
+            
+            # Only process real data rows
+            if len(part_name.strip()) > 2 and part_name.upper() != 'PART NAME':
+                CriticalPartStatus.objects.create(
+                    planning_board=board,
+                    part_name=part_name.strip(),
+                    supplier=supplier.strip() if supplier else '',
+                    plan_qty=plan_qty or 0,
+                    remarks=remarks.strip() if remarks else ''
+                )
+                print(f"Created critical part: {part_name}")
+                
+    except Exception as e:
+        print(f"Error extracting critical parts: {e}")
+
+def extract_afm_plans_fixed(worksheet, board, start_row, plan_type):
+    """Extract AFM plans - FIXED to get data from correct columns"""
+    try:
+        print(f"Extracting AFM {plan_type} from row {start_row}")
+        
+        # Determine column positions based on plan type
+        if plan_type == "FCIN":
+            part_col = 7   # Column G
+            num_col = 8    # Column H
+            qty_col = 9    # Column I  
+            rem_col = 10   # Column J
+        else:  # I/U
+            part_col = 11  # Column K
+            num_col = 12   # Column L
+            qty_col = 13   # Column M
+            rem_col = 14   # Column N
+        
+        # Extract data starting from row after header
+        for row in range(start_row + 3, start_row + 22):
+            part_name = get_cell_value(worksheet, row, part_col)
+            part_number = get_cell_value(worksheet, row, num_col)
+            plan_qty = get_numeric_value(worksheet, row, qty_col)
+            remarks = get_cell_value(worksheet, row, rem_col)
+            
+            # Skip if no part name
+            if not part_name or not part_name.strip():
+                continue
+                
+            # Skip header rows
+            if part_name.upper() in ['PART NAME', 'PART', 'NAME', 'SUPPLIER']:
+                print(f"Skipping AFM header: {part_name}")
+                continue
+            
+            # Only process real data
+            if len(part_name.strip()) > 2:
+                AFMPlan.objects.create(
+                    planning_board=board,
+                    plan_type=plan_type,
+                    part_name=part_name.strip(),
+                    part_number=part_number.strip() if part_number else '',
+                    plan_qty=plan_qty or 0,
+                    remarks=remarks.strip() if remarks else ''
+                )
+                print(f"Created AFM {plan_type} plan: {part_name}")
+                
+    except Exception as e:
+        print(f"Error extracting AFM {plan_type}: {e}")
+
+def extract_spd_plans_fixed(worksheet, board, start_row, customer):
+    """Extract SPD plans - FIXED to get data from correct columns"""
+    try:
+        print(f"Extracting SPD {customer} from row {start_row}")
+        
+        # Column positions for different customers
+        customer_cols = {
+            'MSIL': {'part': 15, 'num': 16, 'qty': 17, 'rem': 18},    # O, P, Q, R
+            'HMSI': {'part': 18, 'num': 19, 'qty': 20, 'rem': 21},   # R, S, T, U  
+            'IYM': {'part': 21, 'num': 22, 'qty': 23, 'rem': 24},    # U, V, W, X
+            'HMCL': {'part': 24, 'num': 25, 'qty': 26, 'rem': 27}    # X, Y, Z, AA
+        }
+        
+        cols = customer_cols.get(customer, customer_cols['MSIL'])
+        
+        # Extract data starting from row after header  
+        for row in range(start_row + 2, start_row + 25):
+            part_name = get_cell_value(worksheet, row, cols['part'])
+            part_number = get_cell_value(worksheet, row, cols['num'])
+            plan_qty = get_numeric_value(worksheet, row, cols['qty'])
+            remarks = get_cell_value(worksheet, row, cols['rem'])
+            
+            # Skip if no part name
+            if not part_name or not part_name.strip():
+                continue
+                
+            # Skip header rows
+            if part_name.upper() in ['PART NAME', 'PART', 'NAME', 'SUPPLIER']:
+                print(f"Skipping SPD header: {part_name}")
+                continue
+            
+            # Only process real data
+            if len(part_name.strip()) > 2:
+                SPDPlan.objects.create(
+                    planning_board=board,
+                    customer=customer,
+                    part_name=part_name.strip(),
+                    part_number=part_number.strip() if part_number else '',
+                    plan_qty=plan_qty or 0,
+                    remarks=remarks.strip() if remarks else ''
+                )
+                print(f"Created SPD {customer} plan: {part_name}")
+                
+    except Exception as e:
+        print(f"Error extracting SPD {customer}: {e}")
+
+def extract_other_information_fixed(worksheet, board, start_row):
+    """Extract other information - FIXED to get real data"""
+    try:
+        print(f"Extracting other information from row {start_row}")
+        
+        # Extract data starting from row after header
+        for row in range(start_row + 2, start_row + 22):
+            part_name = get_cell_value(worksheet, row, 27)   # Column AA
+            qty = get_numeric_value(worksheet, row, 28)      # Column AB
+            target_date_str = get_cell_value(worksheet, row, 29) # Column AC
+            remarks = get_cell_value(worksheet, row, 30)     # Column AD
+            
+            # Skip if no part name
+            if not part_name or not part_name.strip():
+                continue
+                
+            # Skip header rows
+            if part_name.upper() in ['PART NAME', 'PART', 'NAME']:
+                print(f"Skipping other info header: {part_name}")
+                continue
+            
+            # Only process real data
+            if len(part_name.strip()) > 2:
+                # Use current date as default target date
+                target_date = timezone.now().date()
+                
+                OtherInformation.objects.create(
+                    planning_board=board,
+                    part_name=part_name.strip(),
+                    qty=qty or 0,
+                    target_date=target_date,
+                    remarks=remarks.strip() if remarks else ''
+                )
+                print(f"Created other information: {part_name}")
+                
+    except Exception as e:
+        print(f"Error extracting other information: {e}")
+
 def find_section_header(worksheet, keyword):
     """Find the row containing a specific section header keyword"""
     try:
-        for row in range(1, 100):  # Search in reasonable range
-            for col in range(1, 30):
+        for row in range(1, worksheet.max_row + 1):
+            for col in range(1, worksheet.max_column + 1):
                 cell_value = get_cell_value(worksheet, row, col)
-                if keyword.upper() in cell_value.upper():
+                if cell_value and keyword.upper() in cell_value.upper():
+                    print(f"Found '{keyword}' at row {row}, col {col}: '{cell_value}'")
                     return row
         return None
-    except:
+    except Exception as e:
+        print(f"Error finding section header for '{keyword}': {e}")
         return None
 
-# Helper function improvements
 def get_cell_value(worksheet, row, col):
     """Get cell value as string, handling None values"""
     try:
@@ -488,77 +709,6 @@ def get_numeric_value(worksheet, row, col):
         try:
             num_val = float(str(value).replace(',', ''))
             return int(num_val) if num_val == int(num_val) else num_val
-        except:
-            return None
-    except:
-        return None        
-def extract_critical_parts(worksheet, board):
-    """Extract Critical Part Status section"""
-    try:
-        # Look for "CRITICAL" keyword to find the section
-        critical_section_row = find_section_header(worksheet, "CRITICAL")
-        
-        if critical_section_row:
-            # Extract data starting from a few rows after the header
-            for row in range(critical_section_row + 2, critical_section_row + 15):
-                part_name = get_cell_value(worksheet, row, 2)  # Adjust column as needed
-                supplier = get_cell_value(worksheet, row, 3)
-                plan_qty = get_numeric_value(worksheet, row, 4)
-                
-                if part_name and part_name.strip():
-                    CriticalPartStatus.objects.create(
-                        planning_board=board,
-                        part_name=part_name,
-                        supplier=supplier or '',
-                        plan_qty=plan_qty or 0,
-                        remarks=get_cell_value(worksheet, row, 6)
-                    )
-                    
-    except Exception as e:
-        print(f"Error extracting critical parts: {e}")
-
-def extract_future_plans(worksheet, board):
-    """Extract tomorrow and next day plans - improved version"""
-    try:
-        # Tomorrow plans - scan more comprehensively
-        extract_plan_section(worksheet, board, 'tomorrow', 
-                            start_col=21, model_col=21, 
-                            a_shift_col=22, b_shift_col=23, c_shift_col=24, 
-                            remarks_col=25)
-        
-        # Next day plans
-        extract_plan_section(worksheet, board, 'next_day', 
-                            start_col=26, model_col=26, 
-                            a_shift_col=27, b_shift_col=28, c_shift_col=29, 
-                            remarks_col=30)
-                
-    except Exception as e:
-        print(f"Error extracting future plans: {e}")
-
-
-def get_cell_value(worksheet, row, col):
-    """Get cell value as string, handling None values"""
-    try:
-        cell = worksheet.cell(row=row, column=col)
-        value = cell.value
-        if value is None:
-            return ''
-        return str(value).strip()
-    except:
-        return ''
-
-def get_numeric_value(worksheet, row, col):
-    """Get cell value as number, handling None and non-numeric values"""
-    try:
-        cell = worksheet.cell(row=row, column=col)
-        value = cell.value
-        if value is None:
-            return None
-        if isinstance(value, (int, float)):
-            return int(value)
-        # Try to convert string to number
-        try:
-            return int(float(str(value)))
         except:
             return None
     except:
