@@ -205,102 +205,336 @@ def extract_basic_info(worksheet, board):
         print(f"Error extracting basic info: {e}")
 
 def extract_production_lines(worksheet, board):
-    """Extract production line data from specific rows"""
+    """Extract production line data from specific rows - improved version"""
     try:
-        # Define production lines and their row positions based on your Excel structure
+        # Define production lines and their starting row positions
         line_configs = [
-            {'name': 'CLUTCH ASSY LINE-1', 'row': 7},
-            {'name': 'CLUTCH ASSY LINE-2', 'row': 13},
-            {'name': 'PULLEY ASSY LINE-1', 'row': 19},
-            {'name': 'FMD/FFD', 'row': 22},
-            {'name': 'NEW BUSINESS', 'row': 26},
+            {'name': 'CLUTCH ASSY LINE-1', 'start_row': 7, 'max_rows': 5},
+            {'name': 'CLUTCH ASSY LINE-2', 'start_row': 13, 'max_rows': 5},
+            {'name': 'PULLEY ASSY LINE-1', 'start_row': 19, 'max_rows': 2},
+            {'name': 'FMD/FFD', 'start_row': 22, 'max_rows': 3},
+            {'name': 'NEW BUSINESS', 'start_row': 26, 'max_rows': 5},
         ]
         
         for config in line_configs:
-            try:
-                # Check if line exists in Excel
-                line_cell_value = worksheet.cell(row=config['row'], column=2).value
-                
-                # Create production line regardless (we'll populate what we can)
-                production_line = ProductionLine.objects.create(
-                    planning_board=board,
-                    line_number=config['name']
-                )
-                
-                # Try to extract data from multiple rows around the line
-                for row_offset in range(6):  # Check up to 6 rows
-                    current_row = config['row'] + row_offset
-                    
-                    # A Shift data (columns C-H approximately)
-                    if not production_line.a_shift_model:
-                        model_val = get_cell_value(worksheet, current_row, 3)
-                        if model_val:
-                            production_line.a_shift_model = model_val
-                            production_line.a_shift_plan = get_numeric_value(worksheet, current_row, 4)
-                            production_line.a_shift_actual = get_numeric_value(worksheet, current_row, 5)
-                            production_line.a_shift_plan_change = get_numeric_value(worksheet, current_row, 6)
-                            production_line.a_shift_remarks = get_cell_value(worksheet, current_row, 8)
-                    
-                    # B Shift data (columns I-N approximately)
-                    if not production_line.b_shift_model:
-                        model_val = get_cell_value(worksheet, current_row, 9)
-                        if model_val:
-                            production_line.b_shift_model = model_val
-                            production_line.b_shift_plan = get_numeric_value(worksheet, current_row, 10)
-                            production_line.b_shift_actual = get_numeric_value(worksheet, current_row, 11)
-                            production_line.b_shift_plan_change = get_numeric_value(worksheet, current_row, 12)
-                            production_line.b_shift_remarks = get_cell_value(worksheet, current_row, 14)
-                    
-                    # C Shift data (columns O-S approximately)
-                    if not production_line.c_shift_model:
-                        model_val = get_cell_value(worksheet, current_row, 15)
-                        if model_val:
-                            production_line.c_shift_model = model_val
-                            production_line.c_shift_plan = get_numeric_value(worksheet, current_row, 16)
-                            production_line.c_shift_actual = get_numeric_value(worksheet, current_row, 17)
-                            production_line.c_shift_plan_change = get_numeric_value(worksheet, current_row, 18)
-                            production_line.c_shift_remarks = get_cell_value(worksheet, current_row, 19)
-                
-                production_line.save()
-                
-            except Exception as e:
-                print(f"Error processing line {config['name']}: {e}")
-                continue
+            extract_single_production_line(worksheet, board, config)
                 
     except Exception as e:
         print(f"Error extracting production lines: {e}")
 
-def extract_future_plans(worksheet, board):
-    """Extract tomorrow and next day plans"""
+
+def extract_row_data(worksheet, row):
+    """Extract all data from a single row"""
     try:
-        # Extract tomorrow plans (around columns T-W)
-        for row in range(6, 20):  # Check multiple rows
-            model = get_cell_value(worksheet, row, 20)  # Column T
-            if model and model.strip() and model not in ['MODEL', 'SHIFT']:
-                TomorrowPlan.objects.create(
-                    planning_board=board,
-                    model=model,
-                    a_shift=get_numeric_value(worksheet, row, 21),
-                    b_shift=get_numeric_value(worksheet, row, 22),
-                    c_shift=get_numeric_value(worksheet, row, 23),
-                    remarks=get_cell_value(worksheet, row, 24)
-                )
+        return {
+            # A Shift data (adjust column numbers based on your Excel layout)
+            'a_shift': {
+                'model': get_cell_value(worksheet, row, 3),       # Column C
+                'plan': get_numeric_value(worksheet, row, 4),     # Column D
+                'actual': get_numeric_value(worksheet, row, 5),   # Column E
+                'plan_change': get_numeric_value(worksheet, row, 6), # Column F
+                'time': get_time_value(worksheet, row, 7),        # Column G
+                'remarks': get_cell_value(worksheet, row, 8),     # Column H
+            },
+            # B Shift data
+            'b_shift': {
+                'model': get_cell_value(worksheet, row, 9),       # Column I
+                'plan': get_numeric_value(worksheet, row, 10),    # Column J
+                'actual': get_numeric_value(worksheet, row, 11),  # Column K
+                'plan_change': get_numeric_value(worksheet, row, 12), # Column L
+                'time': get_time_value(worksheet, row, 13),       # Column M
+                'remarks': get_cell_value(worksheet, row, 14),    # Column N
+            },
+            # C Shift data
+            'c_shift': {
+                'model': get_cell_value(worksheet, row, 15),      # Column O
+                'plan': get_numeric_value(worksheet, row, 16),    # Column P
+                'actual': get_numeric_value(worksheet, row, 17),  # Column Q
+                'plan_change': get_numeric_value(worksheet, row, 18), # Column R
+                'time': get_time_value(worksheet, row, 19),       # Column S
+                'remarks': get_cell_value(worksheet, row, 20),    # Column T
+            }
+        }
+    except Exception as e:
+        print(f"Error extracting row {row}: {e}")
+        return None
+    
+def has_meaningful_data(row_data):
+    """Check if a row contains meaningful data"""
+    if not row_data:
+        return False
+    
+    # Check if any shift has a model name (indicating actual data)
+    for shift in ['a_shift', 'b_shift', 'c_shift']:
+        if row_data[shift]['model'] and row_data[shift]['model'].strip():
+            # Exclude header rows
+            model = row_data[shift]['model'].strip().upper()
+            if model not in ['MODEL', 'SHIFT', 'LINE', 'NO.', '']:
+                return True
+    
+    return False
+
+def create_production_line_entries(board, line_name, line_entries):
+    """Create production line database entries from extracted data"""
+    try:
+        entry_count = 0
         
-        # Extract next day plans (around columns Y-AB)
-        for row in range(6, 20):
-            model = get_cell_value(worksheet, row, 25)  # Column Y
-            if model and model.strip() and model not in ['MODEL', 'SHIFT']:
-                NextDayPlan.objects.create(
+        for entry_data in line_entries:
+            # Determine if this should be a separate ProductionLine or combined
+            # For now, we'll create separate entries for each meaningful row
+            
+            # Check which shifts have data
+            shifts_with_data = []
+            for shift_name in ['a_shift', 'b_shift', 'c_shift']:
+                if entry_data[shift_name]['model'] and entry_data[shift_name]['model'].strip():
+                    shifts_with_data.append(shift_name)
+            
+            if shifts_with_data:
+                entry_count += 1
+                # Create line name with entry number if multiple entries
+                display_name = f"{line_name}" if entry_count == 1 else f"{line_name} - Entry {entry_count}"
+                
+                # Create the production line
+                production_line = ProductionLine.objects.create(
                     planning_board=board,
-                    model=model,
-                    a_shift=get_numeric_value(worksheet, row, 26),
-                    b_shift=get_numeric_value(worksheet, row, 27),
-                    c_shift=get_numeric_value(worksheet, row, 28),
-                    remarks=get_cell_value(worksheet, row, 29)
+                    line_number=display_name,
+                    # A Shift
+                    a_shift_model=entry_data['a_shift']['model'],
+                    a_shift_plan=entry_data['a_shift']['plan'],
+                    a_shift_actual=entry_data['a_shift']['actual'],
+                    a_shift_plan_change=entry_data['a_shift']['plan_change'],
+                    a_shift_time=entry_data['a_shift']['time'],
+                    a_shift_remarks=entry_data['a_shift']['remarks'],
+                    # B Shift
+                    b_shift_model=entry_data['b_shift']['model'],
+                    b_shift_plan=entry_data['b_shift']['plan'],
+                    b_shift_actual=entry_data['b_shift']['actual'],
+                    b_shift_plan_change=entry_data['b_shift']['plan_change'],
+                    b_shift_time=entry_data['b_shift']['time'],
+                    b_shift_remarks=entry_data['b_shift']['remarks'],
+                    # C Shift
+                    c_shift_model=entry_data['c_shift']['model'],
+                    c_shift_plan=entry_data['c_shift']['plan'],
+                    c_shift_actual=entry_data['c_shift']['actual'],
+                    c_shift_plan_change=entry_data['c_shift']['plan_change'],
+                    c_shift_remarks=entry_data['c_shift']['remarks'],
                 )
+                
+                print(f"Created production line: {display_name}")
+                
+    except Exception as e:
+        print(f"Error creating production line entries for {line_name}: {e}")
+
+def get_time_value(worksheet, row, col):
+    """Get cell value as time, handling various time formats"""
+    try:
+        cell = worksheet.cell(row=row, column=col)
+        value = cell.value
+        
+        if value is None:
+            return None
+            
+        # If it's already a time object
+        if hasattr(value, 'hour'):
+            return value
+            
+        # Try to parse string time formats
+        if isinstance(value, str):
+            import re
+            from datetime import time
+            
+            # Match HH:MM format
+            time_match = re.search(r'(\d{1,2}):(\d{2})', value)
+            if time_match:
+                hour, minute = int(time_match.group(1)), int(time_match.group(2))
+                if 0 <= hour <= 23 and 0 <= minute <= 59:
+                    return time(hour, minute)
+        
+        return None
+    except:
+        return None
+
+def extract_single_production_line(worksheet, board, config):
+    """Extract data for a single production line with multiple entries"""
+    try:
+        line_name = config['name']
+        start_row = config['start_row']
+        max_rows = config.get('max_rows', 5)
+        
+        # Track all data entries for this production line
+        line_entries = []
+        
+        # Scan through all possible rows for this production line
+        for row_offset in range(max_rows):
+            current_row = start_row + row_offset
+            
+            # Check if this row has any meaningful data
+            row_data = extract_row_data(worksheet, current_row)
+            
+            if has_meaningful_data(row_data):
+                line_entries.append(row_data)
+        
+        # Create production line entries
+        if line_entries:
+            create_production_line_entries(board, line_name, line_entries)
+        else:
+            # Create empty production line if no data found
+            ProductionLine.objects.create(
+                planning_board=board,
+                line_number=line_name
+            )
+            
+    except Exception as e:
+        print(f"Error extracting line {config['name']}: {e}")
+
+def extract_plan_section(worksheet, board, plan_type, start_col, model_col, 
+                        a_shift_col, b_shift_col, c_shift_col, remarks_col):
+    """Extract a specific plan section (tomorrow or next day)"""
+    try:
+        # Scan through rows looking for data
+        for row in range(5, 35):  # Expanded row range
+            model = get_cell_value(worksheet, row, model_col)
+            
+            if model and model.strip():
+                model = model.strip().upper()
+                
+                # Skip header rows
+                if model in ['MODEL', 'SHIFT', 'LINE', 'NO.', 'DATE', 'ASSY', 'PLAN']:
+                    continue
+                
+                # Get shift data
+                a_shift = get_numeric_value(worksheet, row, a_shift_col)
+                b_shift = get_numeric_value(worksheet, row, b_shift_col)
+                c_shift = get_numeric_value(worksheet, row, c_shift_col)
+                remarks = get_cell_value(worksheet, row, remarks_col)
+                
+                # Create plan entry if we have meaningful data
+                if a_shift or b_shift or c_shift:
+                    if plan_type == 'tomorrow':
+                        TomorrowPlan.objects.create(
+                            planning_board=board,
+                            model=model,
+                            a_shift=a_shift,
+                            b_shift=b_shift,
+                            c_shift=c_shift,
+                            remarks=remarks
+                        )
+                    else:  # next_day
+                        NextDayPlan.objects.create(
+                            planning_board=board,
+                            model=model,
+                            a_shift=a_shift,
+                            b_shift=b_shift,
+                            c_shift=c_shift,
+                            remarks=remarks
+                        )
+                    
+                    print(f"Created {plan_type} plan for model: {model}")
+                
+    except Exception as e:
+        print(f"Error extracting {plan_type} plans: {e}")
+def extract_additional_sections(worksheet, board):
+    """Extract additional sections like Critical Parts, AFM, SPD, etc."""
+    try:
+        # Find and extract Critical Parts section
+        extract_critical_parts(worksheet, board)
+        
+        # Find and extract AFM Plans section
+        extract_afm_plans(worksheet, board)
+        
+        # Find and extract SPD Plans section
+        extract_spd_plans(worksheet, board)
+        
+        # Find and extract Other Information section
+        extract_other_information(worksheet, board)
+        
+    except Exception as e:
+        print(f"Error extracting additional sections: {e}")
+        
+def find_section_header(worksheet, keyword):
+    """Find the row containing a specific section header keyword"""
+    try:
+        for row in range(1, 100):  # Search in reasonable range
+            for col in range(1, 30):
+                cell_value = get_cell_value(worksheet, row, col)
+                if keyword.upper() in cell_value.upper():
+                    return row
+        return None
+    except:
+        return None
+
+# Helper function improvements
+def get_cell_value(worksheet, row, col):
+    """Get cell value as string, handling None values"""
+    try:
+        cell = worksheet.cell(row=row, column=col)
+        value = cell.value
+        if value is None:
+            return ''
+        return str(value).strip()
+    except:
+        return ''
+
+def get_numeric_value(worksheet, row, col):
+    """Get cell value as number, handling None and non-numeric values"""
+    try:
+        cell = worksheet.cell(row=row, column=col)
+        value = cell.value
+        if value is None:
+            return None
+        if isinstance(value, (int, float)):
+            return int(value) if value == int(value) else value
+        # Try to convert string to number
+        try:
+            num_val = float(str(value).replace(',', ''))
+            return int(num_val) if num_val == int(num_val) else num_val
+        except:
+            return None
+    except:
+        return None        
+def extract_critical_parts(worksheet, board):
+    """Extract Critical Part Status section"""
+    try:
+        # Look for "CRITICAL" keyword to find the section
+        critical_section_row = find_section_header(worksheet, "CRITICAL")
+        
+        if critical_section_row:
+            # Extract data starting from a few rows after the header
+            for row in range(critical_section_row + 2, critical_section_row + 15):
+                part_name = get_cell_value(worksheet, row, 2)  # Adjust column as needed
+                supplier = get_cell_value(worksheet, row, 3)
+                plan_qty = get_numeric_value(worksheet, row, 4)
+                
+                if part_name and part_name.strip():
+                    CriticalPartStatus.objects.create(
+                        planning_board=board,
+                        part_name=part_name,
+                        supplier=supplier or '',
+                        plan_qty=plan_qty or 0,
+                        remarks=get_cell_value(worksheet, row, 6)
+                    )
+                    
+    except Exception as e:
+        print(f"Error extracting critical parts: {e}")
+
+def extract_future_plans(worksheet, board):
+    """Extract tomorrow and next day plans - improved version"""
+    try:
+        # Tomorrow plans - scan more comprehensively
+        extract_plan_section(worksheet, board, 'tomorrow', 
+                            start_col=21, model_col=21, 
+                            a_shift_col=22, b_shift_col=23, c_shift_col=24, 
+                            remarks_col=25)
+        
+        # Next day plans
+        extract_plan_section(worksheet, board, 'next_day', 
+                            start_col=26, model_col=26, 
+                            a_shift_col=27, b_shift_col=28, c_shift_col=29, 
+                            remarks_col=30)
                 
     except Exception as e:
         print(f"Error extracting future plans: {e}")
+
 
 def get_cell_value(worksheet, row, col):
     """Get cell value as string, handling None values"""

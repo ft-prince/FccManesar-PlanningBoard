@@ -1,237 +1,681 @@
-{% extends 'planning_board/base.html' %}
 
-{% block title %}Planning Board Details{% endblock %}
+{% block title %}Production Planning Control Display Board{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --industrial-blue: #1e3a8a;
+        --industrial-gray: #374151;
+        --industrial-light-gray: #f3f4f6;
+        --industrial-border: #d1d5db;
+        --warning-orange: #f59e0b;
+        --success-green: #10b981;
+        --danger-red: #ef4444;
+        --shift-a-color: #3b82f6;
+        --shift-b-color: #10b981;
+        --shift-c-color: #f59e0b;
+    }
+
+    /* Override Bootstrap container for full-width design */
+    .container {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Reset Bootstrap body background */
+    body {
+        background-color: var(--industrial-light-gray) !important;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    }
+
+    .planning-board-container {
+        background: white;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        overflow: hidden;
+        margin: 20px auto;
+        max-width: 1400px;
+    }
+
+    .board-header {
+        background: linear-gradient(135deg, var(--industrial-blue), #1d4ed8);
+        color: white;
+        padding: 20px;
+        text-align: center;
+        position: relative;
+    }
+
+    .board-title {
+        font-size: 1.8rem;
+        font-weight: bold;
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .meeting-info {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
+        padding: 10px;
+        margin-top: 15px;
+        display: inline-block;
+    }
+
+    .date-section {
+        background: var(--industrial-gray);
+        color: white;
+        padding: 15px 0;
+    }
+
+    .date-cards {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
+    }
+
+    .date-card {
+        background: white;
+        color: var(--industrial-gray);
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .date-card-title {
+        font-weight: bold;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        color: var(--industrial-blue);
+        margin-bottom: 5px;
+    }
+
+    .date-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .action-toolbar {
+        background: white;
+        border-bottom: 2px solid var(--industrial-border);
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .section-container {
+        margin: 20px;
+    }
+
+    .section-header {
+        background: var(--industrial-gray);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 6px 6px 0 0;
+        margin: 0;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.95rem;
+        letter-spacing: 0.5px;
+    }
+
+    /* Override Bootstrap table styles */
+    .production-table {
+        width: 100%;
+        border-collapse: collapse !important;
+        margin: 0;
+        background: white;
+        font-size: 0.85rem;
+    }
+
+    .production-table th {
+        background: var(--industrial-blue) !important;
+        color: white !important;
+        padding: 10px 8px !important;
+        text-align: center;
+        font-weight: 600;
+        border: 1px solid #1e40af !important;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        vertical-align: middle;
+    }
+
+    .production-table td {
+        padding: 8px !important;
+        border: 1px solid var(--industrial-border) !important;
+        text-align: center;
+        vertical-align: middle;
+        background: white;
+    }
+
+    .production-table tbody tr:nth-child(even) td {
+        background-color: #f8fafc !important;
+    }
+
+    .production-table tbody tr:hover td {
+        background-color: #e0f2fe !important;
+    }
+
+    .line-name-cell {
+        background: var(--industrial-gray) !important;
+        color: white !important;
+        font-weight: 600 !important;
+        text-align: left !important;
+        padding-left: 12px !important;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+    }
+
+    .shift-header-a {
+        background: var(--shift-a-color) !important;
+        color: white !important;
+    }
+
+    .shift-header-b {
+        background: var(--shift-b-color) !important;
+        color: white !important;
+    }
+
+    .shift-header-c {
+        background: var(--shift-c-color) !important;
+        color: white !important;
+    }
+
+    /* Override Bootstrap table styles for plan tables */
+    .plan-table {
+        width: 100%;
+        border-collapse: collapse !important;
+        background: white;
+        font-size: 0.9rem;
+    }
+
+    .plan-table th {
+        background: var(--industrial-blue) !important;
+        color: white !important;
+        padding: 12px !important;
+        text-align: center;
+        font-weight: 600;
+        border: 1px solid #1e40af !important;
+        text-transform: uppercase;
+        font-size: 0.85rem;
+        vertical-align: middle;
+    }
+
+    .plan-table td {
+        padding: 10px !important;
+        border: 1px solid var(--industrial-border) !important;
+        text-align: center;
+        vertical-align: middle;
+        background: white;
+    }
+
+    .plan-table tbody tr:nth-child(even) td {
+        background-color: #f8fafc !important;
+    }
+
+    .plan-table tbody tr:hover td {
+        background-color: #e0f2fe !important;
+    }
+
+    .qty-value {
+        font-weight: 600;
+        color: var(--industrial-blue);
+    }
+
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        display: inline-block;
+    }
+
+    .badge-customer {
+        background: var(--industrial-blue);
+        color: white;
+    }
+
+    .badge-type {
+        background: var(--warning-orange);
+        color: white;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #6b7280;
+        font-style: italic;
+        background: white;
+        border-radius: 0 0 6px 6px;
+    }
+
+    /* Override Bootstrap button styles */
+    .btn-industrial {
+        background: var(--industrial-blue) !important;
+        border: none !important;
+        color: white !important;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-weight: 500;
+        text-decoration: none !important;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+        font-size: 0.9rem;
+    }
+
+    .btn-industrial:hover {
+        background: #1d4ed8 !important;
+        color: white !important;
+        text-decoration: none !important;
+        transform: translateY(-1px);
+    }
+
+    .btn-export {
+        background: var(--success-green) !important;
+    }
+
+    .btn-export:hover {
+        background: #059669 !important;
+    }
+
+    .btn-secondary-industrial {
+        background: #6b7280 !important;
+    }
+
+    .btn-secondary-industrial:hover {
+        background: #4b5563 !important;
+    }
+
+    .metrics-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 20px;
+        padding: 0;
+    }
+
+    .metric-card {
+        background: white;
+        border: 1px solid var(--industrial-border);
+        border-radius: 6px;
+        padding: 15px;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: var(--industrial-blue);
+    }
+
+    .metric-label {
+        font-size: 0.8rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        margin-top: 5px;
+    }
+
+    .no-data {
+        color: #9ca3af !important;
+        font-style: italic;
+    }
+
+    /* Override Bootstrap alert styles */
+    .alert {
+        margin: 20px auto !important;
+        max-width: 1400px;
+    }
+
+    /* Table responsive wrapper override */
+    .table-responsive {
+        border-radius: 0 0 6px 6px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+        .container {
+            padding: 0 10px !important;
+        }
+        
+        .planning-board-container {
+            margin: 10px auto;
+            border-radius: 4px;
+        }
+        
+        .date-cards {
+            grid-template-columns: 1fr;
+            gap: 10px;
+            padding: 0 10px;
+        }
+        
+        .action-toolbar {
+            flex-direction: column;
+            gap: 10px;
+            text-align: center;
+        }
+
+        .production-table {
+            font-size: 0.75rem;
+        }
+
+        .production-table th,
+        .production-table td {
+            padding: 6px 4px !important;
+        }
+        
+        .section-container {
+            margin: 10px;
+        }
+        
+        .metrics-row {
+            grid-template-columns: repeat(2, 1fr);
+            margin: 10px;
+        }
+    }
+
+    @media print {
+        .action-toolbar {
+            display: none !important;
+        }
+        
+        .planning-board-container {
+            box-shadow: none;
+        }
+        
+        .section-container {
+            margin: 10px 0;
+        }
+        
+        body {
+            background-color: white !important;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1>Planning Board Details</h1>
-    <div>
-        <a href="{% url 'planning_board:edit' board.pk %}" class="btn btn-primary">
-            <i class="fas fa-edit"></i> Edit
-        </a>
-        <a href="{% url 'planning_board:export_excel' board.pk %}" class="btn btn-success">
-            <i class="fas fa-download"></i> Export Excel
-        </a>
-        <a href="{% url 'planning_board:list' %}" class="btn btn-secondary">
-            <i class="fas fa-arrow-left"></i> Back to List
-        </a>
-    </div>
-</div>
-
-<!-- Basic Information -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">Basic Information</h5>
-    </div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col-md-6">
-                <p><strong>Title:</strong> {{ board.title }}</p>
-                <p><strong>Meeting Time:</strong> {{ board.meeting_time|default:"Not set" }}</p>
-            </div>
-            <div class="col-md-6">
-                <p><strong>Created by:</strong> {{ board.created_by.username }}</p>
-                <p><strong>Created on:</strong> {{ board.created_at|date:"M d, Y H:i" }}</p>
-            </div>
+<div class="planning-board-container">
+    <!-- Header Section -->
+    <div class="board-header">
+        <h1 class="board-title">{{ board.title }}</h1>
+        {% if board.meeting_time %}
+        <div class="meeting-info">
+            <i class="fas fa-clock"></i> Meeting Time: {{ board.meeting_time|time:"H:i" }}
         </div>
-        <div class="row">
-            <div class="col-md-4">
-                <p><strong>Today's Date:</strong> {{ board.today_date|date:"M d, Y" }}</p>
+        {% endif %}
+    </div>
+
+    <!-- Date Section -->
+    <div class="date-section">
+        <div class="date-cards">
+            <div class="date-card">
+                <div class="date-card-title">Today</div>
+                <div class="date-value">{{ board.today_date|date:"M d, Y" }}</div>
             </div>
-            <div class="col-md-4">
-                <p><strong>Tomorrow's Date:</strong> {{ board.tomorrow_date|date:"M d, Y" }}</p>
+            <div class="date-card">
+                <div class="date-card-title">Tomorrow</div>
+                <div class="date-value">{{ board.tomorrow_date|date:"M d, Y" }}</div>
             </div>
-            <div class="col-md-4">
-                <p><strong>Next Day Date:</strong> {{ board.next_day_date|date:"M d, Y" }}</p>
+            <div class="date-card">
+                <div class="date-card-title">Next Day</div>
+                <div class="date-value">{{ board.next_day_date|date:"M d, Y" }}</div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Production Lines -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">Production Lines ({{ board.production_lines.count }})</h5>
+    <!-- Action Toolbar -->
+    <div class="action-toolbar">
+        <div>
+            <strong>Created by:</strong> {{ board.created_by.get_full_name|default:board.created_by.username }} 
+            <span style="color: #6b7280;">on {{ board.created_at|date:"M d, Y H:i" }}</span>
+        </div>
+        <div>
+            <a href="{% url 'planning_board:edit' board.pk %}" class="btn-industrial">
+                <i class="fas fa-edit"></i> Edit Board
+            </a>
+            <a href="{% url 'planning_board:export_excel' board.pk %}" class="btn-industrial btn-export">
+                <i class="fas fa-download"></i> Export Excel
+            </a>
+            <a href="{% url 'planning_board:list' %}" class="btn-industrial btn-secondary-industrial">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
+        </div>
     </div>
-    <div class="card-body">
+
+    <!-- Summary Metrics -->
+    <div class="metrics-row">
+        <div class="metric-card">
+            <div class="metric-value">{{ board.production_lines.count }}</div>
+            <div class="metric-label">Production Lines</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">{{ board.tomorrow_plans.count }}</div>
+            <div class="metric-label">Tomorrow Plans</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">{{ board.critical_parts.count }}</div>
+            <div class="metric-label">Critical Parts</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">{{ board.afm_plans.count|add:board.spd_plans.count }}</div>
+            <div class="metric-label">Total Plans</div>
+        </div>
+    </div>
+
+    <!-- Today Assembly Plan (Production Lines) -->
+    <div class="section-container">
+        <h2 class="section-header">
+            <i class="fas fa-industry"></i> Today Assembly Plan
+        </h2>
         {% if board.production_lines.exists %}
             <div class="table-responsive">
-                <table class="table table-sm planning-board-table">
-                    <thead class="table-dark">
+                <table class="production-table">
+                    <thead>
                         <tr>
-                            <th rowspan="2">Line Number</th>
-                            <th colspan="6" class="text-center">A Shift</th>
-                            <th colspan="6" class="text-center">B Shift</th>
-                            <th colspan="5" class="text-center">C Shift</th>
+                            <th rowspan="2" style="width: 140px; vertical-align: middle;">Line Number</th>
+                            <th colspan="6" class="shift-header-a">A Shift</th>
+                            <th colspan="6" class="shift-header-b">B Shift</th>
+                            <th colspan="5" class="shift-header-c">C Shift</th>
                         </tr>
                         <tr>
-                            <!-- A Shift -->
-                            <th>Model</th><th>Plan</th><th>Actual</th><th>Change</th><th>Time</th><th>Remarks</th>
-                            <!-- B Shift -->
-                            <th>Model</th><th>Plan</th><th>Actual</th><th>Change</th><th>Time</th><th>Remarks</th>
-                            <!-- C Shift -->
-                            <th>Model</th><th>Plan</th><th>Actual</th><th>Change</th><th>Remarks</th>
+                            <!-- A Shift Headers -->
+                            <th class="shift-header-a">Model</th>
+                            <th class="shift-header-a">Plan</th>
+                            <th class="shift-header-a">Actual</th>
+                            <th class="shift-header-a">Change</th>
+                            <th class="shift-header-a">Time</th>
+                            <th class="shift-header-a">Remarks</th>
+                            <!-- B Shift Headers -->
+                            <th class="shift-header-b">Model</th>
+                            <th class="shift-header-b">Plan</th>
+                            <th class="shift-header-b">Actual</th>
+                            <th class="shift-header-b">Change</th>
+                            <th class="shift-header-b">Time</th>
+                            <th class="shift-header-b">Remarks</th>
+                            <!-- C Shift Headers -->
+                            <th class="shift-header-c">Model</th>
+                            <th class="shift-header-c">Plan</th>
+                            <th class="shift-header-c">Actual</th>
+                            <th class="shift-header-c">Change</th>
+                            <th class="shift-header-c">Remarks</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for line in board.production_lines.all %}
                             <tr>
-                                <td class="line-header">{{ line.line_number }}</td>
-                                <!-- A Shift -->
-                                <td>{{ line.a_shift_model|default:"-" }}</td>
-                                <td>{{ line.a_shift_plan|default:"-" }}</td>
-                                <td>{{ line.a_shift_actual|default:"-" }}</td>
-                                <td>{{ line.a_shift_plan_change|default:"-" }}</td>
-                                <td>{{ line.a_shift_time|default:"-" }}</td>
-                                <td>{{ line.a_shift_remarks|default:"-" }}</td>
-                                <!-- B Shift -->
-                                <td>{{ line.b_shift_model|default:"-" }}</td>
-                                <td>{{ line.b_shift_plan|default:"-" }}</td>
-                                <td>{{ line.b_shift_actual|default:"-" }}</td>
-                                <td>{{ line.b_shift_plan_change|default:"-" }}</td>
-                                <td>{{ line.b_shift_time|default:"-" }}</td>
-                                <td>{{ line.b_shift_remarks|default:"-" }}</td>
-                                <!-- C Shift -->
-                                <td>{{ line.c_shift_model|default:"-" }}</td>
-                                <td>{{ line.c_shift_plan|default:"-" }}</td>
-                                <td>{{ line.c_shift_actual|default:"-" }}</td>
-                                <td>{{ line.c_shift_plan_change|default:"-" }}</td>
-                                <td>{{ line.c_shift_remarks|default:"-" }}</td>
+                                <td class="line-name-cell">{{ line.line_number }}</td>
+                                <!-- A Shift Data -->
+                                <td>{{ line.a_shift_model|default:"<span class='no-data'>-</span>" }}</td>
+                                <td><span class="qty-value">{{ line.a_shift_plan|default:"<span class='no-data'>-</span>" }}</span></td>
+                                <td><span class="qty-value">{{ line.a_shift_actual|default:"<span class='no-data'>-</span>" }}</span></td>
+                                <td><span class="qty-value">{{ line.a_shift_plan_change|default:"<span class='no-data'>-</span>" }}</span></td>
+                                <td>{{ line.a_shift_time|time:"H:i"|default:"<span class='no-data'>-</span>" }}</td>
+                                <td style="text-align: left;">{{ line.a_shift_remarks|default:"<span class='no-data'>-</span>" }}</td>
+                                <!-- B Shift Data -->
+                                <td>{{ line.b_shift_model|default:"<span class='no-data'>-</span>" }}</td>
+                                <td><span class="qty-value">{{ line.b_shift_plan|default:"<span class='no-data'>-</span>" }}</span></td>
+                                <td><span class="qty-value">{{ line.b_shift_actual|default:"<span class='no-data'>-</span>" }}</span></td>
+                                <td><span class="qty-value">{{ line.b_shift_plan_change|default:"<span class='no-data'>-</span>" }}</span></td>
+                                <td>{{ line.b_shift_time|time:"H:i"|default:"<span class='no-data'>-</span>" }}</td>
+                                <td style="text-align: left;">{{ line.b_shift_remarks|default:"<span class='no-data'>-</span>" }}</td>
+                                <!-- C Shift Data -->
+                                <td>{{ line.c_shift_model|default:"<span class='no-data'>-</span>" }}</td>
+                                <td><span class="qty-value">{{ line.c_shift_plan|default:"<span class='no-data'>-</span>" }}</span></td>
+                                <td><span class="qty-value">{{ line.c_shift_actual|default:"<span class='no-data'>-</span>" }}</span></td>
+                                <td><span class="qty-value">{{ line.c_shift_plan_change|default:"<span class='no-data'>-</span>" }}</span></td>
+                                <td style="text-align: left;">{{ line.c_shift_remarks|default:"<span class='no-data'>-</span>" }}</td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         {% else %}
-            <p class="text-muted">No production lines defined.</p>
+            <div class="empty-state">
+                <i class="fas fa-industry fa-3x mb-3" style="color: #d1d5db;"></i>
+                <p>No production lines configured for today.</p>
+            </div>
         {% endif %}
     </div>
-</div>
 
-<!-- Tomorrow Plans -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">Tomorrow Assembly Plans ({{ board.tomorrow_plans.count }})</h5>
-    </div>
-    <div class="card-body">
+    <!-- Tomorrow Assembly Plan -->
+    <div class="section-container">
+        <h2 class="section-header">
+            <i class="fas fa-calendar-plus"></i> Tomorrow Assembly Plan
+        </h2>
         {% if board.tomorrow_plans.exists %}
             <div class="table-responsive">
-                <table class="table table-striped">
+                <table class="plan-table">
                     <thead>
                         <tr>
-                            <th>Model</th>
+                            <th style="width: 200px;">Model</th>
                             <th>A Shift</th>
                             <th>B Shift</th>
                             <th>C Shift</th>
-                            <th>Remarks</th>
+                            <th style="width: 200px;">Remarks</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for plan in board.tomorrow_plans.all %}
                             <tr>
-                                <td>{{ plan.model }}</td>
-                                <td>{{ plan.a_shift|default:"-" }}</td>
-                                <td>{{ plan.b_shift|default:"-" }}</td>
-                                <td>{{ plan.c_shift|default:"-" }}</td>
-                                <td>{{ plan.remarks|default:"-" }}</td>
+                                <td style="text-align: left; font-weight: 600;">{{ plan.model }}</td>
+                                <td><span class="qty-value">{{ plan.a_shift|default:"<span class='no-data'>-</span>" }}</span></td>
+                                <td><span class="qty-value">{{ plan.b_shift|default:"<span class='no-data'>-</span>" }}</span></td>
+                                <td><span class="qty-value">{{ plan.c_shift|default:"<span class='no-data'>-</span>" }}</span></td>
+                                <td style="text-align: left;">{{ plan.remarks|default:"<span class='no-data'>-</span>" }}</td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         {% else %}
-            <p class="text-muted">No tomorrow plans defined.</p>
+            <div class="empty-state">
+                <i class="fas fa-calendar-plus fa-2x mb-2" style="color: #d1d5db;"></i>
+                <p>No plans scheduled for tomorrow.</p>
+            </div>
         {% endif %}
     </div>
-</div>
 
-<!-- Next Day Plans -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">Next Day Assembly Plans ({{ board.next_day_plans.count }})</h5>
-    </div>
-    <div class="card-body">
+    <!-- Next Day Assembly Plan -->
+    <div class="section-container">
+        <h2 class="section-header">
+            <i class="fas fa-calendar-week"></i> Next Day Assembly Plan
+        </h2>
         {% if board.next_day_plans.exists %}
             <div class="table-responsive">
-                <table class="table table-striped">
+                <table class="plan-table">
                     <thead>
                         <tr>
-                            <th>Model</th>
+                            <th style="width: 200px;">Model</th>
                             <th>A Shift</th>
                             <th>B Shift</th>
                             <th>C Shift</th>
-                            <th>Remarks</th>
+                            <th style="width: 200px;">Remarks</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for plan in board.next_day_plans.all %}
                             <tr>
-                                <td>{{ plan.model }}</td>
-                                <td>{{ plan.a_shift|default:"-" }}</td>
-                                <td>{{ plan.b_shift|default:"-" }}</td>
-                                <td>{{ plan.c_shift|default:"-" }}</td>
-                                <td>{{ plan.remarks|default:"-" }}</td>
+                                <td style="text-align: left; font-weight: 600;">{{ plan.model }}</td>
+                                <td><span class="qty-value">{{ plan.a_shift|default:"<span class='no-data'>-</span>" }}</span></td>
+                                <td><span class="qty-value">{{ plan.b_shift|default:"<span class='no-data'>-</span>" }}</span></td>
+                                <td><span class="qty-value">{{ plan.c_shift|default:"<span class='no-data'>-</span>" }}</span></td>
+                                <td style="text-align: left;">{{ plan.remarks|default:"<span class='no-data'>-</span>" }}</td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         {% else %}
-            <p class="text-muted">No next day plans defined.</p>
+            <div class="empty-state">
+                <i class="fas fa-calendar-week fa-2x mb-2" style="color: #d1d5db;"></i>
+                <p>No plans scheduled for the day after tomorrow.</p>
+            </div>
         {% endif %}
     </div>
-</div>
 
-<!-- Critical Parts -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">Critical Part Status ({{ board.critical_parts.count }})</h5>
-    </div>
-    <div class="card-body">
+    <!-- Critical Part Status -->
+    <div class="section-container">
+        <h2 class="section-header">
+            <i class="fas fa-exclamation-triangle"></i> Critical Part Status
+        </h2>
         {% if board.critical_parts.exists %}
             <div class="table-responsive">
-                <table class="table table-striped">
+                <table class="plan-table">
                     <thead>
                         <tr>
-                            <th>Part Name</th>
-                            <th>Supplier</th>
+                            <th style="width: 200px;">Part Name</th>
+                            <th style="width: 150px;">Supplier</th>
                             <th>Plan Qty</th>
-                            <th>Receiving Time</th>
+                            <th style="width: 150px;">Receiving Time</th>
                             <th>Remarks</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for part in board.critical_parts.all %}
                             <tr>
-                                <td>{{ part.part_name }}</td>
-                                <td>{{ part.supplier }}</td>
-                                <td>{{ part.plan_qty }}</td>
-                                <td>{{ part.receiving_time|default:"-" }}</td>
-                                <td>{{ part.remarks|default:"-" }}</td>
+                                <td style="text-align: left; font-weight: 600;">{{ part.part_name }}</td>
+                                <td style="text-align: left;">{{ part.supplier|default:"<span class='no-data'>-</span>" }}</td>
+                                <td><span class="qty-value">{{ part.plan_qty }}</span></td>
+                                <td>{{ part.receiving_time|date:"M d, H:i"|default:"<span class='no-data'>-</span>" }}</td>
+                                <td style="text-align: left;">{{ part.remarks|default:"<span class='no-data'>-</span>" }}</td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         {% else %}
-            <p class="text-muted">No critical parts defined.</p>
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle fa-2x mb-2" style="color: #d1d5db;"></i>
+                <p>No critical parts identified.</p>
+            </div>
         {% endif %}
     </div>
-</div>
 
-<!-- AFM Plans -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">AFM Plans ({{ board.afm_plans.count }})</h5>
-    </div>
-    <div class="card-body">
+    <!-- AFM Plans -->
+    <div class="section-container">
+        <h2 class="section-header">
+            <i class="fas fa-cogs"></i> AFM Plans
+        </h2>
         {% if board.afm_plans.exists %}
             <div class="table-responsive">
-                <table class="table table-striped">
+                <table class="plan-table">
                     <thead>
                         <tr>
                             <th>Type</th>
-                            <th>Part Name</th>
+                            <th style="width: 200px;">Part Name</th>
                             <th>Part Number</th>
                             <th>Plan Qty</th>
                             <th>Remarks</th>
@@ -240,35 +684,36 @@
                     <tbody>
                         {% for plan in board.afm_plans.all %}
                             <tr>
-                                <td><span class="badge bg-secondary">{{ plan.get_plan_type_display }}</span></td>
-                                <td>{{ plan.part_name }}</td>
-                                <td>{{ plan.part_number|default:"-" }}</td>
-                                <td>{{ plan.plan_qty }}</td>
-                                <td>{{ plan.remarks|default:"-" }}</td>
+                                <td><span class="status-badge badge-type">{{ plan.get_plan_type_display }}</span></td>
+                                <td style="text-align: left; font-weight: 600;">{{ plan.part_name }}</td>
+                                <td>{{ plan.part_number|default:"<span class='no-data'>-</span>" }}</td>
+                                <td><span class="qty-value">{{ plan.plan_qty }}</span></td>
+                                <td style="text-align: left;">{{ plan.remarks|default:"<span class='no-data'>-</span>" }}</td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         {% else %}
-            <p class="text-muted">No AFM plans defined.</p>
+            <div class="empty-state">
+                <i class="fas fa-cogs fa-2x mb-2" style="color: #d1d5db;"></i>
+                <p>No AFM plans defined.</p>
+            </div>
         {% endif %}
     </div>
-</div>
 
-<!-- SPD Plans -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">SPD Plans (Customer-wise) ({{ board.spd_plans.count }})</h5>
-    </div>
-    <div class="card-body">
+    <!-- SPD Plans -->
+    <div class="section-container">
+        <h2 class="section-header">
+            <i class="fas fa-users"></i> SPD Plans (Customer-wise)
+        </h2>
         {% if board.spd_plans.exists %}
             <div class="table-responsive">
-                <table class="table table-striped">
+                <table class="plan-table">
                     <thead>
                         <tr>
                             <th>Customer</th>
-                            <th>Part Name</th>
+                            <th style="width: 200px;">Part Name</th>
                             <th>Part Number</th>
                             <th>Plan Qty</th>
                             <th>Remarks</th>
@@ -277,34 +722,35 @@
                     <tbody>
                         {% for plan in board.spd_plans.all %}
                             <tr>
-                                <td><span class="badge bg-primary">{{ plan.get_customer_display }}</span></td>
-                                <td>{{ plan.part_name }}</td>
-                                <td>{{ plan.part_number|default:"-" }}</td>
-                                <td>{{ plan.plan_qty }}</td>
-                                <td>{{ plan.remarks|default:"-" }}</td>
+                                <td><span class="status-badge badge-customer">{{ plan.get_customer_display }}</span></td>
+                                <td style="text-align: left; font-weight: 600;">{{ plan.part_name }}</td>
+                                <td>{{ plan.part_number|default:"<span class='no-data'>-</span>" }}</td>
+                                <td><span class="qty-value">{{ plan.plan_qty }}</span></td>
+                                <td style="text-align: left;">{{ plan.remarks|default:"<span class='no-data'>-</span>" }}</td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         {% else %}
-            <p class="text-muted">No SPD plans defined.</p>
+            <div class="empty-state">
+                <i class="fas fa-users fa-2x mb-2" style="color: #d1d5db;"></i>
+                <p>No SPD plans defined.</p>
+            </div>
         {% endif %}
     </div>
-</div>
 
-<!-- Other Information -->
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">Other Information ({{ board.other_info.count }})</h5>
-    </div>
-    <div class="card-body">
+    <!-- Other Information -->
+    <div class="section-container">
+        <h2 class="section-header">
+            <i class="fas fa-info-circle"></i> Other Information
+        </h2>
         {% if board.other_info.exists %}
             <div class="table-responsive">
-                <table class="table table-striped">
+                <table class="plan-table">
                     <thead>
                         <tr>
-                            <th>Part Name</th>
+                            <th style="width: 250px;">Part Name</th>
                             <th>Quantity</th>
                             <th>Target Date</th>
                             <th>Remarks</th>
@@ -313,17 +759,20 @@
                     <tbody>
                         {% for info in board.other_info.all %}
                             <tr>
-                                <td>{{ info.part_name }}</td>
-                                <td>{{ info.qty }}</td>
+                                <td style="text-align: left; font-weight: 600;">{{ info.part_name }}</td>
+                                <td><span class="qty-value">{{ info.qty }}</span></td>
                                 <td>{{ info.target_date|date:"M d, Y" }}</td>
-                                <td>{{ info.remarks|default:"-" }}</td>
+                                <td style="text-align: left;">{{ info.remarks|default:"<span class='no-data'>-</span>" }}</td>
                             </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         {% else %}
-            <p class="text-muted">No other information defined.</p>
+            <div class="empty-state">
+                <i class="fas fa-info-circle fa-2x mb-2" style="color: #d1d5db;"></i>
+                <p>No additional information provided.</p>
+            </div>
         {% endif %}
     </div>
 </div>
