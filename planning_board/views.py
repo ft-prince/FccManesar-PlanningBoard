@@ -169,14 +169,17 @@ def process_excel_file(file_path, board):
         
         print(f"Processing Excel file with {worksheet.max_row} rows and {worksheet.max_column} columns")
         
+        # Debug the Excel structure first
+        debug_excel_structure(worksheet)
+        
         # Extract basic information
         extract_basic_info(worksheet, board)
         
         # Extract production lines data
         extract_production_lines(worksheet, board)
         
-        # Extract future planning data  
-        extract_future_plans(worksheet, board)
+        # Extract future planning data with fixed approach
+        extract_future_plans_fixed(worksheet, board)
         
         # Extract additional sections using enhanced approach
         extract_additional_sections(worksheet, board)
@@ -187,6 +190,27 @@ def process_excel_file(file_path, board):
         import traceback
         traceback.print_exc()
         return False
+
+def debug_excel_structure(worksheet):
+    """Debug function to understand Excel layout"""
+    try:
+        print("=== DEBUGGING EXCEL STRUCTURE ===")
+        
+        # Look for plan headers specifically
+        for row in range(1, 15):
+            row_content = []
+            for col in range(1, 35):
+                cell_value = get_cell_value(worksheet, row, col)
+                if cell_value and any(keyword in cell_value.upper() for keyword in ['TOMORROW', 'NEXT', 'DAY', 'PLAN', 'MODEL', 'SHIFT']):
+                    col_letter = chr(64 + col) if col <= 26 else f"A{chr(64 + col - 26)}"
+                    row_content.append(f"Col {col}({col_letter}): '{cell_value}'")
+            
+            if row_content:
+                print(f"Row {row}: {' | '.join(row_content)}")
+        
+        print("=== END DEBUG ===")
+    except Exception as e:
+        print(f"Error in debug: {e}")
 
 def extract_basic_info(worksheet, board):
     """Extract basic information from Excel"""
@@ -266,12 +290,12 @@ def extract_row_data(worksheet, row):
     """Extract all data from a single row"""
     try:
         return {
-            # A Shift data (adjust column numbers based on your Excel layout)
+            # A Shift data
             'a_shift': {
                 'model': get_cell_value(worksheet, row, 3),       # Column C
                 'plan': get_numeric_value(worksheet, row, 4),     # Column D
-                'plan_change': get_numeric_value(worksheet, row, 6), # Column F
                 'actual': get_numeric_value(worksheet, row, 5),   # Column E
+                'plan_change': get_numeric_value(worksheet, row, 6), # Column F
                 'time': get_time_value(worksheet, row, 7),        # Column G
                 'remarks': get_cell_value(worksheet, row, 8),     # Column H
             },
@@ -279,8 +303,8 @@ def extract_row_data(worksheet, row):
             'b_shift': {
                 'model': get_cell_value(worksheet, row, 9),       # Column I
                 'plan': get_numeric_value(worksheet, row, 10),    # Column J
-                'plan_change': get_numeric_value(worksheet, row, 12), # Column L
                 'actual': get_numeric_value(worksheet, row, 11),  # Column K
+                'plan_change': get_numeric_value(worksheet, row, 12), # Column L
                 'time': get_time_value(worksheet, row, 13),       # Column M
                 'remarks': get_cell_value(worksheet, row, 14),    # Column N
             },
@@ -290,8 +314,7 @@ def extract_row_data(worksheet, row):
                 'plan': get_numeric_value(worksheet, row, 16),    # Column P
                 'actual': get_numeric_value(worksheet, row, 17),  # Column Q
                 'plan_change': get_numeric_value(worksheet, row, 18), # Column R
-                # 'time': get_time_value(worksheet, row, 19),       # Column S
-                'remarks': get_cell_value(worksheet, row, 19),    # Column T
+                'remarks': get_cell_value(worksheet, row, 19),    # Column S
             }
         }
     except Exception as e:
@@ -319,9 +342,6 @@ def create_production_line_entries(board, line_name, line_entries):
         entry_count = 0
         
         for entry_data in line_entries:
-            # Determine if this should be a separate ProductionLine or combined
-            # For now, we'll create separate entries for each meaningful row
-            
             # Check which shifts have data
             shifts_with_data = []
             for shift_name in ['a_shift', 'b_shift', 'c_shift']:
@@ -393,73 +413,104 @@ def get_time_value(worksheet, row, col):
     except:
         return None
 
-def extract_future_plans(worksheet, board):
-    """Extract tomorrow and next day plans - improved version"""
+def extract_future_plans_fixed(worksheet, board):
+    """Extract tomorrow and next day plans with manual column specification - FIXED"""
     try:
-        # Tomorrow plans - scan more comprehensively
-        extract_plan_section(worksheet, board, 'tomorrow', 
-                            start_col=21, model_col=21, 
-                            a_shift_col=22, b_shift_col=23, c_shift_col=24, 
-                            remarks_col=25)
+        print("=== EXTRACTING FUTURE PLANS FIXED ===")
         
-        # Next day plans
-        extract_plan_section(worksheet, board, 'next_day', 
-                            start_col=26, model_col=26, 
-                            a_shift_col=27, b_shift_col=28, c_shift_col=29, 
-                            remarks_col=30)
-                
+        # MANUAL COLUMN SPECIFICATION - Adjust these based on your Excel layout
+        
+        # TOMORROW PLAN COLUMNS (typically starts around column T/U)
+        tomorrow_config = {
+            'model_col': 20,     # Column T - TOMORROW MODEL
+            'a_shift_col': 21,   # Column U - TOMORROW A SHIFT  
+            'b_shift_col': 22,   # Column V - TOMORROW B SHIFT
+            'c_shift_col': 23,   # Column W - TOMORROW C SHIFT
+            'remarks_col': 24,   # Column X - TOMORROW REMARKS
+            'start_row': 7,      # Data starts at row 7
+            'end_row': 30        # Data ends at row 30
+        }
+        
+        # NEXT DAY PLAN COLUMNS (typically starts around column Y/Z)
+        next_day_config = {
+            'model_col': 25,     # Column Y - NEXT DAY MODEL
+            'a_shift_col': 26,   # Column Z - NEXT DAY A SHIFT
+            'b_shift_col': 27,   # Column AA - NEXT DAY B SHIFT
+            'c_shift_col': 28,   # Column AB - NEXT DAY C SHIFT
+            'remarks_col': 29,   # Column AC - NEXT DAY REMARKS
+            'start_row': 7,      # Data starts at row 7
+            'end_row': 30        # Data ends at row 30
+        }
+        
+        print("Extracting TOMORROW plans with config:", tomorrow_config)
+        extract_plan_with_config_fixed(worksheet, board, 'tomorrow', tomorrow_config)
+        
+        print("Extracting NEXT DAY plans with config:", next_day_config)
+        extract_plan_with_config_fixed(worksheet, board, 'next_day', next_day_config)
+        
     except Exception as e:
         print(f"Error extracting future plans: {e}")
 
-def extract_plan_section(worksheet, board, plan_type, start_col, model_col, 
-                        a_shift_col, b_shift_col, c_shift_col, remarks_col):
-    """Extract a specific plan section (tomorrow or next day)"""
+def extract_plan_with_config_fixed(worksheet, board, plan_type, config):
+    """Extract plan data using manual configuration - FIXED"""
     try:
-        # Scan through rows looking for data
-        for row in range(5, 35):  # Expanded row range
-            model = get_cell_value(worksheet, row, model_col)
+        print(f"\n=== EXTRACTING {plan_type.upper()} PLANS ===")
+        print(f"Config: {config}")
+        
+        created_count = 0
+        
+        for row in range(config['start_row'], config['end_row']):
+            model = get_cell_value(worksheet, row, config['model_col'])
             
-            if model and model.strip():
-                model = model.strip().upper()
+            if model and model.strip() and len(model.strip()) > 1:
+                model = model.strip()
                 
-                # Skip header rows
-                if model in ['MODEL', 'SHIFT', 'LINE', 'NO.', 'DATE', 'ASSY', 'PLAN']:
+                # Skip headers and common non-data entries
+                if model.upper() in ['MODEL', 'SHIFT', 'REMARKS', 'A', 'B', 'C', 'PLAN', 'ASSY', 'DAY', 'TOMORROW', 'NEXT']:
+                    print(f"  Skipping header row {row}: '{model}'")
                     continue
                 
                 # Get shift data
-                a_shift = get_numeric_value(worksheet, row, a_shift_col)
-                b_shift = get_numeric_value(worksheet, row, b_shift_col)
-                c_shift = get_numeric_value(worksheet, row, c_shift_col)
-                remarks = get_cell_value(worksheet, row, remarks_col)
+                a_shift = get_numeric_value(worksheet, row, config['a_shift_col'])
+                b_shift = get_numeric_value(worksheet, row, config['b_shift_col'])
+                c_shift = get_numeric_value(worksheet, row, config['c_shift_col'])
+                remarks = get_cell_value(worksheet, row, config['remarks_col'])
                 
-                # Create plan entry if we have meaningful data
-                if a_shift or b_shift or c_shift:
-                    if plan_type == 'tomorrow':
-                        TomorrowPlan.objects.create(
-                            planning_board=board,
-                            model=model,
-                            a_shift=a_shift,
-                            b_shift=b_shift,
-                            c_shift=c_shift,
-                            remarks=remarks
-                        )
-                    else:  # next_day
-                        NextDayPlan.objects.create(
-                            planning_board=board,
-                            model=model,
-                            a_shift=a_shift,
-                            b_shift=b_shift,
-                            c_shift=c_shift,
-                            remarks=remarks
-                        )
-                    
-                    print(f"Created {plan_type} plan for model: {model}")
+                # Debug print
+                print(f"  {plan_type} Row {row}: Model='{model}', A={a_shift}, B={b_shift}, C={c_shift}, Remarks='{remarks}'")
+                
+                # Create database entry if we have model name (quantity can be 0)
+                if plan_type == 'tomorrow':
+                    TomorrowPlan.objects.create(
+                        planning_board=board,
+                        model=model,
+                        a_shift=a_shift or 0,
+                        b_shift=b_shift or 0,
+                        c_shift=c_shift or 0,
+                        remarks=remarks or ''
+                    )
+                else:  # next_day
+                    NextDayPlan.objects.create(
+                        planning_board=board,
+                        model=model,
+                        a_shift=a_shift or 0,
+                        b_shift=b_shift or 0,
+                        c_shift=c_shift or 0,
+                        remarks=remarks or ''
+                    )
+                
+                created_count += 1
+                print(f"  ✓ Created {plan_type} plan: {model}")
+        
+        print(f"=== COMPLETED {plan_type.upper()}: Created {created_count} entries ===\n")
                 
     except Exception as e:
-        print(f"Error extracting {plan_type} plans: {e}")
+        print(f"Error extracting {plan_type} with config: {e}")
+        import traceback
+        traceback.print_exc()
 
 def extract_additional_sections(worksheet, board):
-    """Extract additional sections like Critical Parts, AFM, SPD, etc. - FIXED"""
+    """Extract additional sections like Critical Parts, AFM, SPD, etc. - ENHANCED"""
     try:
         print("Starting to extract additional sections...")
         
@@ -504,12 +555,12 @@ def extract_additional_sections(worksheet, board):
         traceback.print_exc()
 
 def extract_critical_parts_fixed(worksheet, board, start_row):
-    """Extract critical parts - FIXED to skip headers and get real data"""
+    """Extract critical parts - ENHANCED to scan more rows"""
     try:
         print(f"Extracting critical parts from row {start_row}")
         
-        # Start from start_row + 2 to skip header row
-        for row in range(start_row + 2, start_row + 22):
+        # Start from start_row + 2 to skip header row, scan more rows
+        for row in range(start_row + 2, start_row + 25):
             part_name = get_cell_value(worksheet, row, 2)    # Column B
             supplier = get_cell_value(worksheet, row, 3)     # Column C  
             plan_qty = get_numeric_value(worksheet, row, 4)  # Column D
@@ -526,7 +577,7 @@ def extract_critical_parts_fixed(worksheet, board, start_row):
                 continue
             
             # Only process real data rows
-            if len(part_name.strip()) > 2 and part_name.upper() != 'PART NAME':
+            if len(part_name.strip()) > 2:
                 CriticalPartStatus.objects.create(
                     planning_board=board,
                     part_name=part_name.strip(),
@@ -540,7 +591,7 @@ def extract_critical_parts_fixed(worksheet, board, start_row):
         print(f"Error extracting critical parts: {e}")
 
 def extract_afm_plans_fixed(worksheet, board, start_row, plan_type):
-    """Extract AFM plans - FIXED to get data from correct columns"""
+    """Extract AFM plans - ENHANCED to scan more rows"""
     try:
         print(f"Extracting AFM {plan_type} from row {start_row}")
         
@@ -556,8 +607,8 @@ def extract_afm_plans_fixed(worksheet, board, start_row, plan_type):
             qty_col = 13   # Column M
             rem_col = 14   # Column N
         
-        # Extract data starting from row after header
-        for row in range(start_row + 3, start_row + 22):
+        # Extract data starting from row after header, scan more rows
+        for row in range(start_row + 3, start_row + 25):
             part_name = get_cell_value(worksheet, row, part_col)
             part_number = get_cell_value(worksheet, row, num_col)
             plan_qty = get_numeric_value(worksheet, row, qty_col)
@@ -588,7 +639,7 @@ def extract_afm_plans_fixed(worksheet, board, start_row, plan_type):
         print(f"Error extracting AFM {plan_type}: {e}")
 
 def extract_spd_plans_fixed(worksheet, board, start_row, customer):
-    """Extract SPD plans - FIXED to get data from correct columns"""
+    """Extract SPD plans - ENHANCED to scan more rows"""
     try:
         print(f"Extracting SPD {customer} from row {start_row}")
         
@@ -602,8 +653,8 @@ def extract_spd_plans_fixed(worksheet, board, start_row, customer):
         
         cols = customer_cols.get(customer, customer_cols['MSIL'])
         
-        # Extract data starting from row after header  
-        for row in range(start_row + 2, start_row + 25):
+        # Extract data starting from row after header, scan more rows
+        for row in range(start_row + 2, start_row + 30):
             part_name = get_cell_value(worksheet, row, cols['part'])
             part_number = get_cell_value(worksheet, row, cols['num'])
             plan_qty = get_numeric_value(worksheet, row, cols['qty'])
@@ -634,12 +685,12 @@ def extract_spd_plans_fixed(worksheet, board, start_row, customer):
         print(f"Error extracting SPD {customer}: {e}")
 
 def extract_other_information_fixed(worksheet, board, start_row):
-    """Extract other information - FIXED to get real data"""
+    """Extract other information - ENHANCED to scan more rows"""
     try:
         print(f"Extracting other information from row {start_row}")
         
-        # Extract data starting from row after header
-        for row in range(start_row + 2, start_row + 22):
+        # Extract data starting from row after header, scan more rows
+        for row in range(start_row + 2, start_row + 25):
             part_name = get_cell_value(worksheet, row, 27)   # Column AA
             qty = get_numeric_value(worksheet, row, 28)      # Column AB
             target_date_str = get_cell_value(worksheet, row, 29) # Column AC
@@ -763,6 +814,17 @@ def export_to_excel(request, pk):
         worksheet.cell(row=row, column=21, value=plan.a_shift)
         worksheet.cell(row=row, column=22, value=plan.b_shift)
         worksheet.cell(row=row, column=23, value=plan.c_shift)
+        worksheet.cell(row=row, column=24, value=plan.remarks)
+        row += 1
+    
+    # Next day plans
+    row = 7
+    for plan in board.next_day_plans.all():
+        worksheet.cell(row=row, column=25, value=plan.model)
+        worksheet.cell(row=row, column=26, value=plan.a_shift)
+        worksheet.cell(row=row, column=27, value=plan.b_shift)
+        worksheet.cell(row=row, column=28, value=plan.c_shift)
+        worksheet.cell(row=row, column=29, value=plan.remarks)
         row += 1
     
     # Create HTTP response

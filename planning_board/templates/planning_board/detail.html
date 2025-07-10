@@ -1,777 +1,533 @@
+{% extends 'planning_board/base.html' %}
 
-{% block title %}Production Planning Control Display Board{% endblock %}
+{% block title %}Dashboard - Planning Board{% endblock %}
 
 {% block extra_css %}
 <style>
-    :root {
-        --industrial-blue: #1e3a8a;
-        --industrial-gray: #374151;
-        --industrial-light-gray: #f3f4f6;
-        --industrial-border: #d1d5db;
-        --warning-orange: #f59e0b;
-        --success-green: #10b981;
-        --danger-red: #ef4444;
-        --shift-a-color: #3b82f6;
-        --shift-b-color: #10b981;
-        --shift-c-color: #f59e0b;
+    /* Dashboard specific styles - scoped to avoid conflicts */
+    .dashboard-container .dashboard-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 2rem 0;
+        margin-bottom: 2rem;
+        border-radius: 15px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     }
-
-    /* Override Bootstrap container for full-width design */
-    .container {
-        max-width: 100% !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }
-
-    /* Reset Bootstrap body background */
-    body {
-        background-color: var(--industrial-light-gray) !important;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
-    }
-
-    .planning-board-container {
+    
+    .dashboard-container .dashboard-stats-card {
+        border: none;
+        border-radius: 20px;
+        transition: all 0.3s ease;
         background: white;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        border-radius: 8px;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
         overflow: hidden;
-        margin: 20px auto;
-        max-width: 1400px;
-    }
-
-    .board-header {
-        background: linear-gradient(135deg, var(--industrial-blue), #1d4ed8);
-        color: white;
-        padding: 20px;
-        text-align: center;
         position: relative;
+        margin-bottom: 1.5rem;
     }
-
-    .board-title {
-        font-size: 1.8rem;
-        font-weight: bold;
-        margin: 0;
-        text-transform: uppercase;
-        letter-spacing: 1px;
+    
+    .dashboard-container .dashboard-stats-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
     }
-
-    .meeting-info {
-        background: rgba(255, 255, 255, 0.1);
-        border-radius: 6px;
-        padding: 10px;
-        margin-top: 15px;
-        display: inline-block;
+    
+    .dashboard-container .dashboard-stats-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #667eea, #764ba2);
     }
-
-    .date-section {
-        background: var(--industrial-gray);
-        color: white;
-        padding: 15px 0;
+    
+    .dashboard-container .dashboard-stats-card .card-body {
+        padding: 2rem;
     }
-
-    .date-cards {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 20px;
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 0 20px;
+    
+    .dashboard-container .dashboard-stats-number {
+        font-size: 3rem;
+        font-weight: 700;
+        color: #2c3e50;
+        margin-bottom: 0.5rem;
+        line-height: 1;
     }
-
-    .date-card {
-        background: white;
-        color: var(--industrial-gray);
-        padding: 15px;
-        border-radius: 8px;
-        text-align: center;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-
-    .date-card-title {
-        font-weight: bold;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        color: var(--industrial-blue);
-        margin-bottom: 5px;
-    }
-
-    .date-value {
+    
+    .dashboard-container .dashboard-stats-label {
         font-size: 1.1rem;
-        font-weight: 600;
-    }
-
-    .action-toolbar {
-        background: white;
-        border-bottom: 2px solid var(--industrial-border);
-        padding: 15px 20px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 10px;
-    }
-
-    .section-container {
-        margin: 20px;
-    }
-
-    .section-header {
-        background: var(--industrial-gray);
-        color: white;
-        padding: 12px 20px;
-        border-radius: 6px 6px 0 0;
-        margin: 0;
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.95rem;
-        letter-spacing: 0.5px;
-    }
-
-    /* Override Bootstrap table styles */
-    .production-table {
-        width: 100%;
-        border-collapse: collapse !important;
-        margin: 0;
-        background: white;
-        font-size: 0.85rem;
-    }
-
-    .production-table th {
-        background: var(--industrial-blue) !important;
-        color: white !important;
-        padding: 10px 8px !important;
-        text-align: center;
-        font-weight: 600;
-        border: 1px solid #1e40af !important;
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        vertical-align: middle;
-    }
-
-    .production-table td {
-        padding: 8px !important;
-        border: 1px solid var(--industrial-border) !important;
-        text-align: center;
-        vertical-align: middle;
-        background: white;
-    }
-
-    .production-table tbody tr:nth-child(even) td {
-    }
-
-    .production-table tbody tr:hover td {
-    }
-
-    .line-name-cell {
-        background: var(--industrial-gray) !important;
-        color: white !important;
-        font-weight: 600 !important;
-        text-align: left !important;
-        padding-left: 12px !important;
-        font-size: 0.8rem;
-        text-transform: uppercase;
-    }
-
-    .shift-header-a {
-        background: var(--shift-a-color) !important;
-        color: white !important;
-    }
-
-    .shift-header-b {
-        background: var(--shift-b-color) !important;
-        color: white !important;
-    }
-
-    .shift-header-c {
-        background: var(--shift-c-color) !important;
-        color: white !important;
-    }
-
-    /* Override Bootstrap table styles for plan tables */
-    .plan-table {
-        width: 100%;
-        border-collapse: collapse !important;
-        background: white;
-        font-size: 0.9rem;
-    }
-
-    .plan-table th {
-        background: var(--industrial-blue) !important;
-        color: white !important;
-        padding: 12px !important;
-        text-align: center;
-        font-weight: 600;
-        border: 1px solid #1e40af !important;
-        text-transform: uppercase;
-        font-size: 0.85rem;
-        vertical-align: middle;
-    }
-
-    .plan-table td {
-        padding: 10px !important;
-        border: 1px solid var(--industrial-border) !important;
-        text-align: center;
-        vertical-align: middle;
-        background: white;
-    }
-
-    .plan-table tbody tr:nth-child(even) td {
-        background-color: #f8fafc !important;
-    }
-
-    .plan-table tbody tr:hover td {
-        background-color: #e0f2fe !important;
-    }
-
-    .qty-value {
-        font-weight: 600;
-        color: var(--industrial-blue);
-    }
-
-    .status-badge {
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 0.75rem;
-        font-weight: 600;
-        text-transform: uppercase;
-        display: inline-block;
-    }
-
-    .badge-customer {
-        background: var(--industrial-blue);
-        color: white;
-    }
-
-    .badge-type {
-        background: var(--warning-orange);
-        color: white;
-    }
-
-    .empty-state {
-        text-align: center;
-        padding: 40px;
-        color: #6b7280;
-        font-style: italic;
-        background: white;
-        border-radius: 0 0 6px 6px;
-    }
-
-    /* Override Bootstrap button styles */
-    .btn-industrial {
-        background: var(--industrial-blue) !important;
-        border: none !important;
-        color: white !important;
-        padding: 8px 16px;
-        border-radius: 4px;
+        color: #7f8c8d;
         font-weight: 500;
-        text-decoration: none !important;
-        display: inline-flex;
-        align-items: center;
-        gap: 8px;
-        transition: all 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0;
+    }
+    
+    .dashboard-container .dashboard-stats-icon {
+        font-size: 4rem;
+        opacity: 0.1;
+        position: absolute;
+        right: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    
+    .dashboard-container .dashboard-filter-section {
+        background: white;
+        border-radius: 15px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+    }
+    
+    .dashboard-container .dashboard-main-card {
+        border: none;
+        border-radius: 20px;
+        background: white;
+        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        overflow: hidden;
+    }
+    
+    .dashboard-container .dashboard-main-card .card-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border: none;
+        padding: 2rem;
+    }
+    
+    .dashboard-container .dashboard-table {
+        margin: 0;
+    }
+    
+    .dashboard-container .dashboard-table thead th {
+        background: #f8f9fa;
+        border: none;
+        padding: 1.5rem 1rem;
+        font-weight: 600;
+        color: #2c3e50;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
         font-size: 0.9rem;
     }
-
-    .btn-industrial:hover {
-        background: #1d4ed8 !important;
-        color: white !important;
-        text-decoration: none !important;
-        transform: translateY(-1px);
+    
+    .dashboard-container .dashboard-table tbody td {
+        padding: 1.5rem 1rem;
+        border-top: 1px solid #e9ecef;
+        vertical-align: middle;
     }
-
-    .btn-export {
-        background: var(--success-green) !important;
+    
+    .dashboard-container .dashboard-table tbody tr:hover {
+        background: #f8f9fa;
     }
-
-    .btn-export:hover {
-        background: #059669 !important;
+    
+    .dashboard-container .dashboard-btn-action {
+        border-radius: 10px;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        border: none;
+        margin-right: 0.5rem;
     }
-
-    .btn-secondary-industrial {
-        background: #6b7280 !important;
+    
+    .dashboard-container .dashboard-btn-action:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
     }
-
-    .btn-secondary-industrial:hover {
-        background: #4b5563 !important;
+    
+    .dashboard-container .dashboard-btn-primary {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
     }
-
-    .metrics-row {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 15px;
-        margin: 20px;
-        padding: 0;
+    
+    .dashboard-container .dashboard-btn-success {
+        background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
+        color: white;
     }
-
-    .metric-card {
-        background: white;
-        border: 1px solid var(--industrial-border);
-        border-radius: 6px;
-        padding: 15px;
+    
+    .dashboard-container .dashboard-btn-info {
+        background: linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%);
+        color: white;
+    }
+    
+    .dashboard-container .dashboard-empty-state {
         text-align: center;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        padding: 4rem 2rem;
+        color: #7f8c8d;
     }
-
-    .metric-value {
-        font-size: 1.5rem;
-        font-weight: bold;
-        color: var(--industrial-blue);
+    
+    .dashboard-container .dashboard-empty-icon {
+        font-size: 6rem;
+        margin-bottom: 2rem;
+        opacity: 0.3;
     }
-
-    .metric-label {
-        font-size: 0.8rem;
-        color: #6b7280;
-        text-transform: uppercase;
-        margin-top: 5px;
+    
+    .dashboard-container .dashboard-form-control {
+        border-radius: 10px;
+        border: 2px solid #e9ecef;
+        padding: 0.75rem 1rem;
+        transition: all 0.3s ease;
     }
-
-    .no-data {
-        color: #9ca3af !important;
-        font-style: italic;
+    
+    .dashboard-container .dashboard-form-control:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
     }
-
-    /* Override Bootstrap alert styles */
-    .alert {
-        margin: 20px auto !important;
-        max-width: 1400px;
+    
+    .dashboard-container .dashboard-filter-buttons {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
     }
-
-    /* Table responsive wrapper override */
-    .table-responsive {
-        border-radius: 0 0 6px 6px;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+    
+    .dashboard-container .dashboard-filter-btn {
+        border-radius: 25px;
+        padding: 0.5rem 1.5rem;
+        border: 2px solid #e9ecef;
+        background: white;
+        color: #6c757d;
+        transition: all 0.3s ease;
+        cursor: pointer;
     }
-
-    /* Mobile responsiveness */
+    
+    .dashboard-container .dashboard-filter-btn.active {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        border-color: #667eea;
+    }
+    
+    .dashboard-container .dashboard-filter-btn:hover {
+        border-color: #667eea;
+        color: #667eea;
+    }
+    
+    .dashboard-container .dashboard-date-badge {
+        background: #f8f9fa;
+        border-radius: 10px;
+        padding: 0.5rem;
+        text-align: center;
+        min-width: 60px;
+    }
+    
+    .dashboard-container .dashboard-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-bottom: 3rem;
+    }
+    
     @media (max-width: 768px) {
-        .container {
-            padding: 0 10px !important;
-        }
-        
-        .planning-board-container {
-            margin: 10px auto;
-            border-radius: 4px;
-        }
-        
-        .date-cards {
+        .dashboard-container .dashboard-stats-grid {
             grid-template-columns: 1fr;
-            gap: 10px;
-            padding: 0 10px;
         }
         
-        .action-toolbar {
-            flex-direction: column;
-            gap: 10px;
-            text-align: center;
-        }
-
-        .production-table {
-            font-size: 0.75rem;
-        }
-
-        .production-table th,
-        .production-table td {
-            padding: 6px 4px !important;
+        .dashboard-container .dashboard-header {
+            padding: 1.5rem 0;
         }
         
-        .section-container {
-            margin: 10px;
+        .dashboard-container .dashboard-stats-number {
+            font-size: 2.5rem;
         }
         
-        .metrics-row {
-            grid-template-columns: repeat(2, 1fr);
-            margin: 10px;
-        }
-    }
-
-    @media print {
-        .action-toolbar {
-            display: none !important;
-        }
-        
-        .planning-board-container {
-            box-shadow: none;
-        }
-        
-        .section-container {
-            margin: 10px 0;
-        }
-        
-        body {
-            background-color: white !important;
+        .dashboard-container .dashboard-filter-buttons {
+            justify-content: center;
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="planning-board-container">
-    <!-- Header Section -->
-    <div class="board-header">
-        <h1 class="board-title">{{ board.title }}</h1>
-        {% if board.meeting_time %}
-        <div class="meeting-info">
-            <i class="fas fa-clock"></i> Meeting Time: {{ board.meeting_time|time:"H:i" }}
-        </div>
-        {% endif %}
-    </div>
-
-    <!-- Date Section -->
-    <div class="date-section">
-        <div class="date-cards">
-            <div class="date-card">
-                <div class="date-card-title">Today</div>
-                <div class="date-value">{{ board.today_date|date:"M d, Y" }}</div>
-            </div>
-            <div class="date-card">
-                <div class="date-card-title">Tomorrow</div>
-                <div class="date-value">{{ board.tomorrow_date|date:"M d, Y" }}</div>
-            </div>
-            <div class="date-card">
-                <div class="date-card-title">Next Day</div>
-                <div class="date-value">{{ board.next_day_date|date:"M d, Y" }}</div>
+<div class="dashboard-container">
+    <div class="dashboard-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <h1 class="display-4 mb-2">Production Planning Dashboard</h1>
+                    <p class="lead mb-0">Manage your production schedules and planning boards efficiently</p>
+                </div>
+                <div class="col-lg-4 text-lg-end">
+                    <a href="{% url 'planning_board:create' %}" class="btn btn-light btn-lg">
+                        <i class="fas fa-plus me-2"></i> Create New Board
+                    </a>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Action Toolbar -->
-    <div class="action-toolbar">
-        <div>
-            <strong>Created by:</strong> {{ board.created_by.get_full_name|default:board.created_by.username }} 
-            <span style="color: #6b7280;">on {{ board.created_at|date:"M d, Y H:i" }}</span>
+    <!-- Statistics Cards -->
+    <div class="dashboard-stats-grid">
+        <div class="dashboard-stats-card">
+            <div class="card-body">
+                <div class="dashboard-stats-number">{{ total_boards }}</div>
+                <div class="dashboard-stats-label">Total Planning Boards</div>
+                <i class="fas fa-clipboard-list dashboard-stats-icon"></i>
+            </div>
         </div>
-        <div>
-            <a href="{% url 'planning_board:edit' board.pk %}" class="btn-industrial">
-                <i class="fas fa-edit"></i> Edit Board
-            </a>
-            <a href="{% url 'planning_board:export_excel' board.pk %}" class="btn-industrial btn-export">
-                <i class="fas fa-download"></i> Export Excel
-            </a>
-            <a href="{% url 'planning_board:list' %}" class="btn-industrial btn-secondary-industrial">
-                <i class="fas fa-arrow-left"></i> Back to List
-            </a>
+        
+        <div class="dashboard-stats-card">
+            <div class="card-body">
+                <div class="dashboard-stats-number">{{ total_production_lines }}</div>
+                <div class="dashboard-stats-label">Production Lines</div>
+                <i class="fas fa-industry dashboard-stats-icon"></i>
+            </div>
         </div>
-    </div>
-
-    <!-- Summary Metrics -->
-    <div class="metrics-row">
-        <div class="metric-card">
-            <div class="metric-value">{{ board.production_lines.count }}</div>
-            <div class="metric-label">Production Lines</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-value">{{ board.tomorrow_plans.count }}</div>
-            <div class="metric-label">Tomorrow Plans</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-value">{{ board.critical_parts.count }}</div>
-            <div class="metric-label">Critical Parts</div>
-        </div>
-        <div class="metric-card">
-            <div class="metric-value">{{ board.afm_plans.count|add:board.spd_plans.count }}</div>
-            <div class="metric-label">Total Plans</div>
+        
+        <div class="dashboard-stats-card">
+            <div class="card-body">
+                <div class="dashboard-stats-number">{{ recent_boards.count }}</div>
+                <div class="dashboard-stats-label">Recent Boards</div>
+                <i class="fas fa-clock dashboard-stats-icon"></i>
+            </div>
         </div>
     </div>
 
-    <!-- Today Assembly Plan (Production Lines) -->
-    <div class="section-container">
-        <h2 class="section-header">
-            <i class="fas fa-industry"></i> Today Assembly Plan
-        </h2>
-        {% if board.production_lines.exists %}
-            <div class="table-responsive">
-                <table class="production-table">
-                    <thead>
-                        <tr>
-                            <th rowspan="2" style="width: 140px; vertical-align: middle;">Line Number</th>
-                            <th colspan="6" class="shift-header-a">A Shift</th>
-                            <th colspan="6" class="shift-header-b">B Shift</th>
-                            <th colspan="5" class="shift-header-c">C Shift</th>
-                        </tr>
-                        <tr>
-                            <!-- A Shift Headers -->
-                            <th class="shift-header-a">Model</th>
-                            <th class="shift-header-a">Plan</th>
-                            <th class="shift-header-a">Change</th>
-                            <th class="shift-header-a">Actual</th>
-                            <th class="shift-header-a">Time</th>
-                            <th class="shift-header-a">Remarks</th>
-                            <!-- B Shift Headers -->
-                            <th class="shift-header-b">Model</th>
-                            <th class="shift-header-b">Plan</th>
-                            <th class="shift-header-b">Change</th>
-                            <th class="shift-header-b">Actual</th>
-                            <th class="shift-header-b">Time</th>
-                            <th class="shift-header-b">Remarks</th>
-                            <!-- C Shift Headers -->
-                            <th class="shift-header-c">Model</th>
-                            <th class="shift-header-c">Plan</th>
-                            <th class="shift-header-c">Actual</th>
-                            <th class="shift-header-c">Change</th>
-                            <th class="shift-header-c">Remarks</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for line in board.production_lines.all %}
+    <!-- Filter Section -->
+    <div class="dashboard-filter-section">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <h5 class="mb-3">Filter Planning Boards</h5>
+                <div class="dashboard-filter-buttons">
+                    <button class="dashboard-filter-btn active" data-filter="today">Today</button>
+                    <button class="dashboard-filter-btn" data-filter="week">This Week</button>
+                    <button class="dashboard-filter-btn" data-filter="month">This Month</button>
+                    <button class="dashboard-filter-btn" data-filter="all">All Time</button>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">From Date</label>
+                        <input type="date" class="form-control dashboard-form-control" id="fromDate" name="from_date">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">To Date</label>
+                        <input type="date" class="form-control dashboard-form-control" id="toDate" name="to_date">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Table -->
+    <div class="dashboard-main-card">
+        <div class="card-header">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h4 class="mb-0">Planning Boards</h4>
+                    <p class="mb-0 opacity-75">Manage and track your production planning boards</p>
+                </div>
+                <div class="col-md-4 text-md-end">
+                    <div class="dropdown">
+                        <button class="btn btn-light dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown">
+                            <i class="fas fa-download me-2"></i> Export
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-file-excel me-2"></i> Excel</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-file-pdf me-2"></i> PDF</a></li>
+                            <li><a class="dropdown-item" href="#"><i class="fas fa-file-csv me-2"></i> CSV</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if recent_boards %}
+                <div class="table-responsive">
+                    <table class="table dashboard-table" id="planningBoardsTable">
+                        <thead>
                             <tr>
-                                <td class="line-name-cell">{{ line.line_number }}</td>
-                                <!-- A Shift Data -->
-                                <td>{{ line.a_shift_model|default:"<span class='no-data'>-</span>" }}</td>
-                                <td><span class="qty-value">{{ line.a_shift_plan|default:"<span class='no-data'>-</span>" }}</span></td>
-                                <td><span class="qty-value">{{ line.a_shift_actual|default:"<span class='no-data'>-</span>" }}</span></td>
-                                <td><span class="qty-value">{{ line.a_shift_plan_change|default:"<span class='no-data'>-</span>" }}</span></td>
-                                <td>{{ line.a_shift_time|time:"H:i"|default:"<span class='no-data'>-</span>" }}</td>
-                                <td style="text-align: left;">{{ line.a_shift_remarks|default:"<span class='no-data'>-</span>" }}</td>
-                                <!-- B Shift Data -->
-                                <td>{{ line.b_shift_model|default:"<span class='no-data'>-</span>" }}</td>
-                                <td><span class="qty-value">{{ line.b_shift_plan|default:"<span class='no-data'>-</span>" }}</span></td>
-                                <td><span class="qty-value">{{ line.b_shift_actual|default:"<span class='no-data'>-</span>" }}</span></td>
-                                <td><span class="qty-value">{{ line.b_shift_plan_change|default:"<span class='no-data'>-</span>" }}</span></td>
-                                <td>{{ line.b_shift_time|time:"H:i"|default:"<span class='no-data'>-</span>" }}</td>
-                                <td style="text-align: left;">{{ line.b_shift_remarks|default:"<span class='no-data'>-</span>" }}</td>
-                                <!-- C Shift Data -->
-                                <td>{{ line.c_shift_model|default:"<span class='no-data'>-</span>" }}</td>
-                                <td><span class="qty-value">{{ line.c_shift_plan|default:"<span class='no-data'>-</span>" }}</span></td>
-                                <td><span class="qty-value">{{ line.c_shift_actual|default:"<span class='no-data'>-</span>" }}</span></td>
-                                <td><span class="qty-value">{{ line.c_shift_plan_change|default:"<span class='no-data'>-</span>" }}</span></td>
-                                <td style="text-align: left;">{{ line.c_shift_remarks|default:"<span class='no-data'>-</span>" }}</td>
+                                <th>
+                                    <i class="fas fa-calendar-alt me-2"></i>Date
+                                </th>
+                                <th>
+                                    <i class="fas fa-file-alt me-2"></i>Title
+                                </th>
+                                <th>
+                                    <i class="fas fa-clock me-2"></i>Meeting Time
+                                </th>
+                                <th>
+                                    <i class="fas fa-plus-circle me-2"></i>Created
+                                </th>
+                                <th>
+                                    <i class="fas fa-user me-2"></i>Status
+                                </th>
+                                <th>
+                                    <i class="fas fa-cogs me-2"></i>Actions
+                                </th>
                             </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <div class="empty-state">
-                <i class="fas fa-industry fa-3x mb-3" style="color: #d1d5db;"></i>
-                <p>No production lines configured for today.</p>
-            </div>
-        {% endif %}
-    </div>
-
-    <!-- Tomorrow Assembly Plan -->
-    <div class="section-container">
-        <h2 class="section-header">
-            <i class="fas fa-calendar-plus"></i> Tomorrow Assembly Plan
-        </h2>
-        {% if board.tomorrow_plans.exists %}
-            <div class="table-responsive">
-                <table class="plan-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 200px;">Model</th>
-                            <th>A Shift</th>
-                            <th>B Shift</th>
-                            <th>C Shift</th>
-                            <th style="width: 200px;">Remarks</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for plan in board.tomorrow_plans.all %}
-                            <tr>
-                                <td style="text-align: left; font-weight: 600;">{{ plan.model }}</td>
-                                <td><span class="qty-value">{{ plan.a_shift|default:"<span class='no-data'>-</span>" }}</span></td>
-                                <td><span class="qty-value">{{ plan.b_shift|default:"<span class='no-data'>-</span>" }}</span></td>
-                                <td><span class="qty-value">{{ plan.c_shift|default:"<span class='no-data'>-</span>" }}</span></td>
-                                <td style="text-align: left;">{{ plan.remarks|default:"<span class='no-data'>-</span>" }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <div class="empty-state">
-                <i class="fas fa-calendar-plus fa-2x mb-2" style="color: #d1d5db;"></i>
-                <p>No plans scheduled for tomorrow.</p>
-            </div>
-        {% endif %}
-    </div>
-
-    <!-- Next Day Assembly Plan -->
-    <div class="section-container">
-        <h2 class="section-header">
-            <i class="fas fa-calendar-week"></i> Next Day Assembly Plan
-        </h2>
-        {% if board.next_day_plans.exists %}
-            <div class="table-responsive">
-                <table class="plan-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 200px;">Model</th>
-                            <th>A Shift</th>
-                            <th>B Shift</th>
-                            <th>C Shift</th>
-                            <th style="width: 200px;">Remarks</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for plan in board.next_day_plans.all %}
-                            <tr>
-                                <td style="text-align: left; font-weight: 600;">{{ plan.model }}</td>
-                                <td><span class="qty-value">{{ plan.a_shift|default:"<span class='no-data'>-</span>" }}</span></td>
-                                <td><span class="qty-value">{{ plan.b_shift|default:"<span class='no-data'>-</span>" }}</span></td>
-                                <td><span class="qty-value">{{ plan.c_shift|default:"<span class='no-data'>-</span>" }}</span></td>
-                                <td style="text-align: left;">{{ plan.remarks|default:"<span class='no-data'>-</span>" }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <div class="empty-state">
-                <i class="fas fa-calendar-week fa-2x mb-2" style="color: #d1d5db;"></i>
-                <p>No plans scheduled for the day after tomorrow.</p>
-            </div>
-        {% endif %}
-    </div>
-
-    <!-- Critical Part Status -->
-    <div class="section-container">
-        <h2 class="section-header">
-            <i class="fas fa-exclamation-triangle"></i> Critical Part Status
-        </h2>
-        {% if board.critical_parts.exists %}
-            <div class="table-responsive">
-                <table class="plan-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 200px;">Part Name</th>
-                            <th style="width: 150px;">Supplier</th>
-                            <th>Plan Qty</th>
-                            <th style="width: 150px;">Receiving Time</th>
-                            <th>Remarks</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for part in board.critical_parts.all %}
-                            <tr>
-                                <td style="text-align: left; font-weight: 600;">{{ part.part_name }}</td>
-                                <td style="text-align: left;">{{ part.supplier|default:"<span class='no-data'>-</span>" }}</td>
-                                <td><span class="qty-value">{{ part.plan_qty }}</span></td>
-                                <td>{{ part.receiving_time|date:"M d, H:i"|default:"<span class='no-data'>-</span>" }}</td>
-                                <td style="text-align: left;">{{ part.remarks|default:"<span class='no-data'>-</span>" }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <div class="empty-state">
-                <i class="fas fa-exclamation-triangle fa-2x mb-2" style="color: #d1d5db;"></i>
-                <p>No critical parts identified.</p>
-            </div>
-        {% endif %}
-    </div>
-
-    <!-- AFM Plans -->
-    <div class="section-container">
-        <h2 class="section-header">
-            <i class="fas fa-cogs"></i> AFM Plans
-        </h2>
-        {% if board.afm_plans.exists %}
-            <div class="table-responsive">
-                <table class="plan-table">
-                    <thead>
-                        <tr>
-                            <th>Type</th>
-                            <th style="width: 200px;">Part Name</th>
-                            <th>Part Number</th>
-                            <th>Plan Qty</th>
-                            <th>Remarks</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for plan in board.afm_plans.all %}
-                            <tr>
-                                <td><span class="status-badge badge-type">{{ plan.get_plan_type_display }}</span></td>
-                                <td style="text-align: left; font-weight: 600;">{{ plan.part_name }}</td>
-                                <td>{{ plan.part_number|default:"<span class='no-data'>-</span>" }}</td>
-                                <td><span class="qty-value">{{ plan.plan_qty }}</span></td>
-                                <td style="text-align: left;">{{ plan.remarks|default:"<span class='no-data'>-</span>" }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <div class="empty-state">
-                <i class="fas fa-cogs fa-2x mb-2" style="color: #d1d5db;"></i>
-                <p>No AFM plans defined.</p>
-            </div>
-        {% endif %}
-    </div>
-
-    <!-- SPD Plans -->
-    <div class="section-container">
-        <h2 class="section-header">
-            <i class="fas fa-users"></i> SPD Plans (Customer-wise)
-        </h2>
-        {% if board.spd_plans.exists %}
-            <div class="table-responsive">
-                <table class="plan-table">
-                    <thead>
-                        <tr>
-                            <th>Customer</th>
-                            <th style="width: 200px;">Part Name</th>
-                            <th>Part Number</th>
-                            <th>Plan Qty</th>
-                            <th>Remarks</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for plan in board.spd_plans.all %}
-                            <tr>
-                                <td><span class="status-badge badge-customer">{{ plan.get_customer_display }}</span></td>
-                                <td style="text-align: left; font-weight: 600;">{{ plan.part_name }}</td>
-                                <td>{{ plan.part_number|default:"<span class='no-data'>-</span>" }}</td>
-                                <td><span class="qty-value">{{ plan.plan_qty }}</span></td>
-                                <td style="text-align: left;">{{ plan.remarks|default:"<span class='no-data'>-</span>" }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <div class="empty-state">
-                <i class="fas fa-users fa-2x mb-2" style="color: #d1d5db;"></i>
-                <p>No SPD plans defined.</p>
-            </div>
-        {% endif %}
-    </div>
-
-    <!-- Other Information -->
-    <div class="section-container">
-        <h2 class="section-header">
-            <i class="fas fa-info-circle"></i> Other Information
-        </h2>
-        {% if board.other_info.exists %}
-            <div class="table-responsive">
-                <table class="plan-table">
-                    <thead>
-                        <tr>
-                            <th style="width: 250px;">Part Name</th>
-                            <th>Quantity</th>
-                            <th>Target Date</th>
-                            <th>Remarks</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for info in board.other_info.all %}
-                            <tr>
-                                <td style="text-align: left; font-weight: 600;">{{ info.part_name }}</td>
-                                <td><span class="qty-value">{{ info.qty }}</span></td>
-                                <td>{{ info.target_date|date:"M d, Y" }}</td>
-                                <td style="text-align: left;">{{ info.remarks|default:"<span class='no-data'>-</span>" }}</td>
-                            </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        {% else %}
-            <div class="empty-state">
-                <i class="fas fa-info-circle fa-2x mb-2" style="color: #d1d5db;"></i>
-                <p>No additional information provided.</p>
-            </div>
-        {% endif %}
+                        </thead>
+                        <tbody>
+                            {% for board in recent_boards %}
+                                <tr data-date="{{ board.today_date|date:'Y-m-d' }}">
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            <div class="dashboard-date-badge me-3">
+                                                <div class="text-muted small">{{ board.today_date|date:"M" }}</div>
+                                                <div class="h5 mb-0">{{ board.today_date|date:"d" }}</div>
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">{{ board.today_date|date:"l" }}</div>
+                                                <div class="text-muted small">{{ board.today_date|date:"Y" }}</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="fw-bold">{{ board.title|truncatechars:40 }}</div>
+                                        {% if board.description %}
+                                            <div class="text-muted small">{{ board.description|truncatechars:60 }}</div>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if board.meeting_time %}
+                                            <span class="badge bg-success">{{ board.meeting_time }}</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Not Set</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="text-muted small">{{ board.created_at|date:"M d, Y" }}</div>
+                                        <div class="text-muted small">{{ board.created_at|date:"H:i" }}</div>
+                                    </td>
+                                    <td>
+                                        {% if board.today_date|date:"Y-m-d" == today %}
+                                            <span class="badge bg-primary">Today</span>
+                                        {% elif board.today_date|date:"Y-m-d" > today %}
+                                            <span class="badge bg-warning">Upcoming</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Past</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'planning_board:detail' board.pk %}" class="btn btn-sm dashboard-btn-action dashboard-btn-primary" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'planning_board:edit' board.pk %}" class="btn btn-sm dashboard-btn-action dashboard-btn-success" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button class="btn btn-sm dashboard-btn-action dashboard-btn-info" title="Duplicate" onclick="duplicateBoard({{ board.pk }})">
+                                                <i class="fas fa-copy"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="dashboard-empty-state">
+                    <i class="fas fa-clipboard-list dashboard-empty-icon"></i>
+                    <h3>No Planning Boards Found</h3>
+                    <p class="mb-4">Get started by creating your first planning board or uploading an Excel file.</p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <a href="{% url 'planning_board:create' %}" class="btn dashboard-btn-primary btn-lg">
+                            <i class="fas fa-plus me-2"></i> Create New Board
+                        </a>
+                        <a href="{% url 'planning_board:excel_upload' %}" class="btn dashboard-btn-success btn-lg">
+                            <i class="fas fa-file-excel me-2"></i> Upload Excel
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
     </div>
 </div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Set today's date as default
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('fromDate').value = today;
+    document.getElementById('toDate').value = today;
+    
+    // Filter functionality
+    const filterButtons = document.querySelectorAll('.dashboard-filter-btn');
+    const fromDate = document.getElementById('fromDate');
+    const toDate = document.getElementById('toDate');
+    const tableRows = document.querySelectorAll('#planningBoardsTable tbody tr');
+    
+    // Apply today filter by default
+    filterByDate('today');
+    
+    filterButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            filterButtons.forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            
+            const filter = this.dataset.filter;
+            filterByDate(filter);
+        });
+    });
+    
+    fromDate.addEventListener('change', customDateFilter);
+    toDate.addEventListener('change', customDateFilter);
+    
+    function filterByDate(filter) {
+        const today = new Date();
+        let startDate, endDate;
+        
+        switch(filter) {
+            case 'today':
+                startDate = new Date(today);
+                endDate = new Date(today);
+                break;
+            case 'week':
+                startDate = new Date(today);
+                startDate.setDate(today.getDate() - today.getDay());
+                endDate = new Date(startDate);
+                endDate.setDate(startDate.getDate() + 6);
+                break;
+            case 'month':
+                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                break;
+            case 'all':
+                showAllRows();
+                return;
+        }
+        
+        if (filter !== 'all') {
+            fromDate.value = startDate.toISOString().split('T')[0];
+            toDate.value = endDate.toISOString().split('T')[0];
+            applyDateFilter(startDate, endDate);
+        }
+    }
+    
+    function customDateFilter() {
+        if (fromDate.value && toDate.value) {
+            const startDate = new Date(fromDate.value);
+            const endDate = new Date(toDate.value);
+            applyDateFilter(startDate, endDate);
+            
+            // Update button state
+            filterButtons.forEach(b => b.classList.remove('active'));
+        }
+    }
+    
+    function applyDateFilter(startDate, endDate) {
+        tableRows.forEach(row => {
+            const rowDate = new Date(row.dataset.date);
+            if (rowDate >= startDate && rowDate <= endDate) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+    
+    function showAllRows() {
+        tableRows.forEach(row => {
+            row.style.display = '';
+        });
+    }
+});
+
+function duplicateBoard(boardId) {
+    if (confirm('Are you sure you want to duplicate this planning board?')) {
+        // Add your duplicate logic here
+        console.log('Duplicating board:', boardId);
+    }
+}
+</script>
 {% endblock %}
