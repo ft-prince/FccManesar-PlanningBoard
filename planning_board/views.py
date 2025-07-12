@@ -5,6 +5,8 @@ from django.contrib import messages
 from django.http import JsonResponse, HttpResponse
 from django.urls import reverse
 from django.utils import timezone
+from django.db.models import Q
+
 from datetime import datetime, timedelta
 import openpyxl
 import io
@@ -244,7 +246,7 @@ def extract_production_lines(worksheet, board):
             {'name': 'CLUTCH ASSY LINE-2', 'start_row': 10, 'max_rows': 5},
             {'name': 'PULLEY ASSY LINE-1', 'start_row': 7, 'max_rows': 2},
             {'name': 'FMD/FFD', 'start_row': 22, 'max_rows': 3},
-            {'name': 'NEW BUSINESS', 'start_row': 26, 'max_rows': 5},
+            {'name': 'NEW BUSINESS', 'start_row': 26, 'max_rows': 2},
         ]
         
         for config in line_configs:
@@ -860,23 +862,581 @@ def ajax_add_production_line(request):
 
 @login_required
 def planning_board_dashboard(request):
-    """Dashboard view showing overview of all planning boards"""
+    """Enhanced dashboard view with filtering capabilities"""
+    
+    # Get filter parameters
+    date_from = request.GET.get('date_from')
+    date_to = request.GET.get('date_to')
+    status_filter = request.GET.get('status')
+    
+    # Start with all boards for the user
+    boards_query = PlanningBoard.objects.filter(created_by=request.user)
+    
+    # Apply date filtering
+    if date_from:
+        try:
+            from_date = datetime.strptime(date_from, '%Y-%m-%d').date()
+            boards_query = boards_query.filter(today_date__gte=from_date)
+        except ValueError:
+            pass
+    
+    if date_to:
+        try:
+            to_date = datetime.strptime(date_to, '%Y-%m-%d').date()
+            boards_query = boards_query.filter(today_date__lte=to_date)
+        except ValueError:
+            pass
+    
+    # Apply status filtering
+    today = timezone.now().date()
+    if status_filter:
+        if status_filter == 'today':
+            boards_query = boards_query.filter(today_date=today)
+        elif status_filter == 'recent':
+            three_days_ago = today - timedelta(days=3)
+            boards_query = boards_query.filter(today_date__gte=three_days_ago)
+        elif status_filter == 'this_week':
+            week_start = today - timedelta(days=today.weekday())
+            boards_query = boards_query.filter(today_date__gte=week_start)
+        elif status_filter == 'this_month':
+            month_start = today.replace(day=1)
+            boards_query = boards_query.filter(today_date__gte=month_start)
+    
+    # If no filters applied and no request parameters, default to today's boards
+    elif not request.GET:
+        # Redirect to today's filter on first load
+        return redirect(f"{request.path}?date_from={today}&date_to={today}&status=today")
+    
+    # Order by most recent first
+    filtered_boards = boards_query.order_by('-created_at')
+    
+    # Get recent boards (last 5 regardless of filters for sidebar)
     recent_boards = PlanningBoard.objects.filter(
         created_by=request.user
     ).order_by('-created_at')[:5]
     
-    # Get some statistics
+    # Calculate statistics
     total_boards = PlanningBoard.objects.filter(created_by=request.user).count()
     total_production_lines = ProductionLine.objects.filter(
         planning_board__created_by=request.user
     ).count()
     total_uploads = ExcelUpload.objects.filter(uploaded_by=request.user).count()
     
+    # Today's boards count
+    today_boards_count = PlanningBoard.objects.filter(
+        created_by=request.user, 
+        today_date=today
+    ).count()
+    
+    # This week's boards count
+    week_start = today - timedelta(days=today.weekday())
+    week_boards_count = PlanningBoard.objects.filter(
+        created_by=request.user,
+        today_date__gte=week_start
+    ).count()
+    
     context = {
+        'filtered_boards': filtered_boards,
         'recent_boards': recent_boards,
         'total_boards': total_boards,
         'total_production_lines': total_production_lines,
         'total_uploads': total_uploads,
+        'today_boards_count': today_boards_count,
+        'week_boards_count': week_boards_count,
+        # Filter values to maintain state
+        'filter_date_from': date_from,
+        'filter_date_to': date_to,
+        'filter_status': status_filter,
+        'today_date': today.strftime('%Y-%m-%d'),
     }
     
     return render(request, 'planning_board/dashboard.html', context)
+
+
+
+
+
+
+
+
+
+
+# Add this to your views.py file
+
+import json
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+from django.views.decorators.http import require_http_methods
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.decorators import login_required
+from datetime import datetime
+from django.utils import timezone
+
+@login_required
+@require_http_methods(["POST"])
+def inline_update_board(request, pk):
+    """Handle inline updates for planning board and related data"""
+    try:
+        board = get_object_or_404(PlanningBoard, pk=pk, created_by=request.user)
+        
+        # Parse JSON data
+        data = json.loads(request.body)
+        print(f"Received data: {data}")  # Debug logging
+        
+        # Process board-level updates
+        if 'board' in data and 'main' in data['board']:
+            board_updates = data['board']['main']
+            for field, value in board_updates.items():
+                if hasattr(board, field):
+                    # Handle different field types
+                    if field in ['today_date', 'tomorrow_date', 'next_day_date']:
+                        if value:
+                            try:
+                                setattr(board, field, datetime.strptime(value, '%Y-%m-%d').date())
+                            except ValueError:
+                                print(f"Invalid date format for {field}: {value}")
+                                continue
+                    elif field == 'meeting_time':
+                        if value:
+                            try:
+                                setattr(board, field, datetime.strptime(value, '%H:%M').time())
+                            except ValueError:
+                                print(f"Invalid time format for {field}: {value}")
+                                continue
+                    else:
+                        setattr(board, field, value or None)
+            board.save()
+            print(f"Updated board: {board.title}")
+        
+        # Process production line updates
+        if 'production_line' in data:
+            for line_id, updates in data['production_line'].items():
+                if line_id.startswith('new_'):
+                    # Create new production line
+                    try:
+                        ProductionLine.objects.create(
+                            planning_board=board,
+                            **process_production_line_data(updates)
+                        )
+                        print(f"Created new production line with temp ID: {line_id}")
+                    except Exception as e:
+                        print(f"Error creating production line: {e}")
+                        continue
+                else:
+                    # Update existing production line
+                    try:
+                        line = ProductionLine.objects.get(id=line_id, planning_board=board)
+                        for field, value in updates.items():
+                            processed_value = process_field_value(field, value)
+                            if hasattr(line, field):
+                                setattr(line, field, processed_value)
+                        line.save()
+                        print(f"Updated production line ID: {line_id}")
+                    except ProductionLine.DoesNotExist:
+                        print(f"Production line not found: {line_id}")
+                        continue
+                    except Exception as e:
+                        print(f"Error updating production line {line_id}: {e}")
+                        continue
+        
+        # Process tomorrow plan updates
+        if 'tomorrow_plan' in data:
+            for plan_id, updates in data['tomorrow_plan'].items():
+                if plan_id.startswith('new_'):
+                    # Create new plan
+                    try:
+                        TomorrowPlan.objects.create(
+                            planning_board=board,
+                            **process_plan_data(updates)
+                        )
+                        print(f"Created new tomorrow plan with temp ID: {plan_id}")
+                    except Exception as e:
+                        print(f"Error creating tomorrow plan: {e}")
+                        continue
+                else:
+                    # Update existing plan
+                    try:
+                        plan = TomorrowPlan.objects.get(id=plan_id, planning_board=board)
+                        for field, value in updates.items():
+                            processed_value = process_field_value(field, value)
+                            if hasattr(plan, field):
+                                setattr(plan, field, processed_value)
+                        plan.save()
+                        print(f"Updated tomorrow plan ID: {plan_id}")
+                    except TomorrowPlan.DoesNotExist:
+                        print(f"Tomorrow plan not found: {plan_id}")
+                        continue
+                    except Exception as e:
+                        print(f"Error updating tomorrow plan {plan_id}: {e}")
+                        continue
+        
+        # Process next day plan updates
+        if 'next_day_plan' in data:
+            for plan_id, updates in data['next_day_plan'].items():
+                if plan_id.startswith('new_'):
+                    # Create new plan
+                    try:
+                        NextDayPlan.objects.create(
+                            planning_board=board,
+                            **process_plan_data(updates)
+                        )
+                        print(f"Created new next day plan with temp ID: {plan_id}")
+                    except Exception as e:
+                        print(f"Error creating next day plan: {e}")
+                        continue
+                else:
+                    # Update existing plan
+                    try:
+                        plan = NextDayPlan.objects.get(id=plan_id, planning_board=board)
+                        for field, value in updates.items():
+                            processed_value = process_field_value(field, value)
+                            if hasattr(plan, field):
+                                setattr(plan, field, processed_value)
+                        plan.save()
+                        print(f"Updated next day plan ID: {plan_id}")
+                    except NextDayPlan.DoesNotExist:
+                        print(f"Next day plan not found: {plan_id}")
+                        continue
+                    except Exception as e:
+                        print(f"Error updating next day plan {plan_id}: {e}")
+                        continue
+        
+        # Process critical part updates
+        if 'critical_part' in data:
+            for part_id, updates in data['critical_part'].items():
+                if part_id.startswith('new_'):
+                    # Create new critical part
+                    try:
+                        CriticalPartStatus.objects.create(
+                            planning_board=board,
+                            **process_critical_part_data(updates)
+                        )
+                        print(f"Created new critical part with temp ID: {part_id}")
+                    except Exception as e:
+                        print(f"Error creating critical part: {e}")
+                        continue
+                else:
+                    # Update existing critical part
+                    try:
+                        part = CriticalPartStatus.objects.get(id=part_id, planning_board=board)
+                        for field, value in updates.items():
+                            processed_value = process_field_value(field, value)
+                            if hasattr(part, field):
+                                setattr(part, field, processed_value)
+                        part.save()
+                        print(f"Updated critical part ID: {part_id}")
+                    except CriticalPartStatus.DoesNotExist:
+                        print(f"Critical part not found: {part_id}")
+                        continue
+                    except Exception as e:
+                        print(f"Error updating critical part {part_id}: {e}")
+                        continue
+        
+        # Process AFM plan updates
+        if 'afm_plan' in data:
+            for plan_id, updates in data['afm_plan'].items():
+                if plan_id.startswith('new_'):
+                    # Create new AFM plan
+                    try:
+                        AFMPlan.objects.create(
+                            planning_board=board,
+                            **process_afm_plan_data(updates)
+                        )
+                        print(f"Created new AFM plan with temp ID: {plan_id}")
+                    except Exception as e:
+                        print(f"Error creating AFM plan: {e}")
+                        continue
+                else:
+                    # Update existing AFM plan
+                    try:
+                        plan = AFMPlan.objects.get(id=plan_id, planning_board=board)
+                        for field, value in updates.items():
+                            processed_value = process_field_value(field, value)
+                            if hasattr(plan, field):
+                                setattr(plan, field, processed_value)
+                        plan.save()
+                        print(f"Updated AFM plan ID: {plan_id}")
+                    except AFMPlan.DoesNotExist:
+                        print(f"AFM plan not found: {plan_id}")
+                        continue
+                    except Exception as e:
+                        print(f"Error updating AFM plan {plan_id}: {e}")
+                        continue
+        
+        # Process SPD plan updates
+        if 'spd_plan' in data:
+            for plan_id, updates in data['spd_plan'].items():
+                if plan_id.startswith('new_'):
+                    # Create new SPD plan
+                    try:
+                        SPDPlan.objects.create(
+                            planning_board=board,
+                            **process_spd_plan_data(updates)
+                        )
+                        print(f"Created new SPD plan with temp ID: {plan_id}")
+                    except Exception as e:
+                        print(f"Error creating SPD plan: {e}")
+                        continue
+                else:
+                    # Update existing SPD plan
+                    try:
+                        plan = SPDPlan.objects.get(id=plan_id, planning_board=board)
+                        for field, value in updates.items():
+                            processed_value = process_field_value(field, value)
+                            if hasattr(plan, field):
+                                setattr(plan, field, processed_value)
+                        plan.save()
+                        print(f"Updated SPD plan ID: {plan_id}")
+                    except SPDPlan.DoesNotExist:
+                        print(f"SPD plan not found: {plan_id}")
+                        continue
+                    except Exception as e:
+                        print(f"Error updating SPD plan {plan_id}: {e}")
+                        continue
+        
+        # Process other information updates
+        if 'other_info' in data:
+            for info_id, updates in data['other_info'].items():
+                if info_id.startswith('new_'):
+                    # Create new other info
+                    try:
+                        OtherInformation.objects.create(
+                            planning_board=board,
+                            **process_other_info_data(updates)
+                        )
+                        print(f"Created new other info with temp ID: {info_id}")
+                    except Exception as e:
+                        print(f"Error creating other info: {e}")
+                        continue
+                else:
+                    # Update existing other info
+                    try:
+                        info = OtherInformation.objects.get(id=info_id, planning_board=board)
+                        for field, value in updates.items():
+                            processed_value = process_field_value(field, value)
+                            if hasattr(info, field):
+                                setattr(info, field, processed_value)
+                        info.save()
+                        print(f"Updated other info ID: {info_id}")
+                    except OtherInformation.DoesNotExist:
+                        print(f"Other info not found: {info_id}")
+                        continue
+                    except Exception as e:
+                        print(f"Error updating other info {info_id}: {e}")
+                        continue
+        
+        # Process deletions
+        if 'delete' in data:
+            for model_type, ids in data['delete'].items():
+                for obj_id in ids:
+                    try:
+                        if model_type == 'production_line':
+                            ProductionLine.objects.get(id=obj_id, planning_board=board).delete()
+                            print(f"Deleted production line ID: {obj_id}")
+                        elif model_type == 'tomorrow_plan':
+                            TomorrowPlan.objects.get(id=obj_id, planning_board=board).delete()
+                            print(f"Deleted tomorrow plan ID: {obj_id}")
+                        elif model_type == 'next_day_plan':
+                            NextDayPlan.objects.get(id=obj_id, planning_board=board).delete()
+                            print(f"Deleted next day plan ID: {obj_id}")
+                        elif model_type == 'critical_part':
+                            CriticalPartStatus.objects.get(id=obj_id, planning_board=board).delete()
+                            print(f"Deleted critical part ID: {obj_id}")
+                        elif model_type == 'afm_plan':
+                            AFMPlan.objects.get(id=obj_id, planning_board=board).delete()
+                            print(f"Deleted AFM plan ID: {obj_id}")
+                        elif model_type == 'spd_plan':
+                            SPDPlan.objects.get(id=obj_id, planning_board=board).delete()
+                            print(f"Deleted SPD plan ID: {obj_id}")
+                        elif model_type == 'other_info':
+                            OtherInformation.objects.get(id=obj_id, planning_board=board).delete()
+                            print(f"Deleted other info ID: {obj_id}")
+                    except Exception as e:
+                        print(f"Error deleting {model_type} ID {obj_id}: {e}")
+                        continue
+        
+        return JsonResponse({
+            'success': True, 
+            'message': 'Changes saved successfully',
+            'board_id': board.pk
+        })
+        
+    except json.JSONDecodeError as e:
+        print(f"JSON decode error: {e}")
+        return JsonResponse({'success': False, 'error': 'Invalid JSON data'})
+    except Exception as e:
+        print(f"Unexpected error in inline_update_board: {e}")
+        import traceback
+        traceback.print_exc()
+        return JsonResponse({'success': False, 'error': str(e)})
+
+def process_field_value(field, value):
+    """Process field value based on field type"""
+    if not value or value == '-':
+        return None
+    
+    # Handle time fields
+    if 'time' in field and value:
+        try:
+            return datetime.strptime(value, '%H:%M').time()
+        except ValueError:
+            print(f"Invalid time format for {field}: {value}")
+            return None
+    
+    # Handle date fields
+    if 'date' in field and value:
+        try:
+            return datetime.strptime(value, '%Y-%m-%d').date()
+        except ValueError:
+            print(f"Invalid date format for {field}: {value}")
+            return None
+    
+    # Handle datetime fields
+    if field == 'receiving_time' and value:
+        try:
+            return datetime.strptime(value, '%Y-%m-%dT%H:%M')
+        except ValueError:
+            print(f"Invalid datetime format for {field}: {value}")
+            return None
+    
+    # Handle numeric fields
+    numeric_fields = [
+        'plan', 'actual', 'plan_change', 'plan_qty', 'qty',
+        'a_shift_plan', 'a_shift_actual', 'a_shift_plan_change',
+        'b_shift_plan', 'b_shift_actual', 'b_shift_plan_change',
+        'c_shift_plan', 'c_shift_actual', 'c_shift_plan_change',
+        'a_shift', 'b_shift', 'c_shift'
+    ]
+    
+    if field in numeric_fields and value:
+        try:
+            # Try integer first, then float
+            if '.' in str(value):
+                return float(value)
+            else:
+                return int(value)
+        except (ValueError, TypeError):
+            print(f"Invalid numeric value for {field}: {value}")
+            return 0
+    
+    # Return string value for everything else
+    return str(value).strip() if value else ''
+
+def process_production_line_data(data):
+    """Process production line data for creation"""
+    processed = {}
+    for field, value in data.items():
+        processed[field] = process_field_value(field, value)
+    
+    # Ensure required fields have default values
+    if 'line_number' not in processed or not processed['line_number']:
+        processed['line_number'] = 'New Line'
+    
+    return processed
+
+def process_plan_data(data):
+    """Process plan data for creation (tomorrow/next day plans)"""
+    processed = {}
+    for field, value in data.items():
+        if field in ['a_shift', 'b_shift', 'c_shift'] and value:
+            try:
+                processed[field] = int(value) if str(value).isdigit() else float(value)
+            except (ValueError, TypeError):
+                processed[field] = 0
+        else:
+            processed[field] = str(value).strip() if value else ''
+    
+    # Ensure required fields have default values
+    if 'model' not in processed or not processed['model']:
+        processed['model'] = 'New Model'
+    
+    return processed
+
+def process_critical_part_data(data):
+    """Process critical part data for creation"""
+    processed = {}
+    for field, value in data.items():
+        if field == 'plan_qty' and value:
+            try:
+                processed[field] = int(value) if str(value).isdigit() else float(value)
+            except (ValueError, TypeError):
+                processed[field] = 0
+        elif field == 'receiving_time' and value:
+            try:
+                processed[field] = datetime.strptime(value, '%Y-%m-%dT%H:%M')
+            except ValueError:
+                processed[field] = None
+        else:
+            processed[field] = str(value).strip() if value else ''
+    
+    # Ensure required fields have default values
+    if 'part_name' not in processed or not processed['part_name']:
+        processed['part_name'] = 'New Critical Part'
+    
+    return processed
+
+def process_afm_plan_data(data):
+    """Process AFM plan data for creation"""
+    processed = {}
+    for field, value in data.items():
+        if field == 'plan_qty' and value:
+            try:
+                processed[field] = int(value) if str(value).isdigit() else float(value)
+            except (ValueError, TypeError):
+                processed[field] = 0
+        else:
+            processed[field] = str(value).strip() if value else ''
+    
+    # Ensure required fields have default values
+    if 'part_name' not in processed or not processed['part_name']:
+        processed['part_name'] = 'New AFM Part'
+    if 'plan_type' not in processed or not processed['plan_type']:
+        processed['plan_type'] = 'FCIN'
+    
+    return processed
+
+def process_spd_plan_data(data):
+    """Process SPD plan data for creation"""
+    processed = {}
+    for field, value in data.items():
+        if field == 'plan_qty' and value:
+            try:
+                processed[field] = int(value) if str(value).isdigit() else float(value)
+            except (ValueError, TypeError):
+                processed[field] = 0
+        else:
+            processed[field] = str(value).strip() if value else ''
+    
+    # Ensure required fields have default values
+    if 'part_name' not in processed or not processed['part_name']:
+        processed['part_name'] = 'New SPD Part'
+    if 'customer' not in processed or not processed['customer']:
+        processed['customer'] = 'MSIL'
+    
+    return processed
+
+def process_other_info_data(data):
+    """Process other information data for creation"""
+    processed = {}
+    for field, value in data.items():
+        if field == 'qty' and value:
+            try:
+                processed[field] = int(value) if str(value).isdigit() else float(value)
+            except (ValueError, TypeError):
+                processed[field] = 0
+        elif field == 'target_date' and value:
+            try:
+                processed[field] = datetime.strptime(value, '%Y-%m-%d').date()
+            except ValueError:
+                processed[field] = timezone.now().date()
+        else:
+            processed[field] = str(value).strip() if value else ''
+    
+    # Ensure required fields have default values
+    if 'part_name' not in processed or not processed['part_name']:
+        processed['part_name'] = 'New Information'
+    if 'target_date' not in processed:
+        processed['target_date'] = timezone.now().date()
+    
+    return processed

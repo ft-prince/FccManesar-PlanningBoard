@@ -1,533 +1,1691 @@
-{% extends 'planning_board/base.html' %}
 
-{% block title %}Dashboard - Planning Board{% endblock %}
 
 {% block extra_css %}
 <style>
-    /* Dashboard specific styles - scoped to avoid conflicts */
-    .dashboard-container .dashboard-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        padding: 2rem 0;
-        margin-bottom: 2rem;
-        border-radius: 15px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    :root {
+        --industrial-blue: #1e3a8a;
+        --industrial-gray: #374151;
+        --industrial-light-gray: #f3f4f6;
+        --industrial-border: #d1d5db;
+        --warning-orange: #f59e0b;
+        --success-green: #10b981;
+        --danger-red: #ef4444;
+        --shift-a-color: #3b82f6;
+        --shift-b-color: #10b981;
+        --shift-c-color: #f59e0b;
+        --edit-highlight: #fef3c7;
     }
-    
-    .dashboard-container .dashboard-stats-card {
-        border: none;
-        border-radius: 20px;
-        transition: all 0.3s ease;
+
+    /* Override Bootstrap container for full-width design */
+    .container {
+        max-width: 100% !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    /* Reset Bootstrap body background */
+    body {
+        background-color: var(--industrial-light-gray) !important;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+    }
+
+    .planning-board-container {
         background: white;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
         overflow: hidden;
-        position: relative;
-        margin-bottom: 1.5rem;
+        margin: 20px auto;
+        max-width: 100vw;
     }
-    
-    .dashboard-container .dashboard-stats-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 15px 35px rgba(0,0,0,0.1);
-    }
-    
-    .dashboard-container .dashboard-stats-card::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #667eea, #764ba2);
-    }
-    
-    .dashboard-container .dashboard-stats-card .card-body {
-        padding: 2rem;
-    }
-    
-    .dashboard-container .dashboard-stats-number {
-        font-size: 3rem;
-        font-weight: 700;
-        color: #2c3e50;
-        margin-bottom: 0.5rem;
-        line-height: 1;
-    }
-    
-    .dashboard-container .dashboard-stats-label {
-        font-size: 1.1rem;
-        color: #7f8c8d;
-        font-weight: 500;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 0;
-    }
-    
-    .dashboard-container .dashboard-stats-icon {
-        font-size: 4rem;
-        opacity: 0.1;
-        position: absolute;
-        right: 1rem;
-        top: 50%;
-        transform: translateY(-50%);
-    }
-    
-    .dashboard-container .dashboard-filter-section {
-        background: white;
-        border-radius: 15px;
-        padding: 2rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-    }
-    
-    .dashboard-container .dashboard-main-card {
-        border: none;
-        border-radius: 20px;
-        background: white;
-        box-shadow: 0 5px 15px rgba(0,0,0,0.08);
-        overflow: hidden;
-    }
-    
-    .dashboard-container .dashboard-main-card .card-header {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+    .board-header {
+        background: linear-gradient(135deg, var(--industrial-blue), #1d4ed8);
         color: white;
-        border: none;
-        padding: 2rem;
-    }
-    
-    .dashboard-container .dashboard-table {
-        margin: 0;
-    }
-    
-    .dashboard-container .dashboard-table thead th {
-        background: #f8f9fa;
-        border: none;
-        padding: 1.5rem 1rem;
-        font-weight: 600;
-        color: #2c3e50;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        font-size: 0.9rem;
-    }
-    
-    .dashboard-container .dashboard-table tbody td {
-        padding: 1.5rem 1rem;
-        border-top: 1px solid #e9ecef;
-        vertical-align: middle;
-    }
-    
-    .dashboard-container .dashboard-table tbody tr:hover {
-        background: #f8f9fa;
-    }
-    
-    .dashboard-container .dashboard-btn-action {
-        border-radius: 10px;
-        padding: 0.5rem 1rem;
-        font-weight: 500;
-        transition: all 0.3s ease;
-        border: none;
-        margin-right: 0.5rem;
-    }
-    
-    .dashboard-container .dashboard-btn-action:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-    }
-    
-    .dashboard-container .dashboard-btn-primary {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-    }
-    
-    .dashboard-container .dashboard-btn-success {
-        background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%);
-        color: white;
-    }
-    
-    .dashboard-container .dashboard-btn-info {
-        background: linear-gradient(135deg, #36d1dc 0%, #5b86e5 100%);
-        color: white;
-    }
-    
-    .dashboard-container .dashboard-empty-state {
+        padding: 20px;
         text-align: center;
-        padding: 4rem 2rem;
-        color: #7f8c8d;
+        position: relative;
     }
-    
-    .dashboard-container .dashboard-empty-icon {
-        font-size: 6rem;
-        margin-bottom: 2rem;
-        opacity: 0.3;
+
+    .board-title {
+        font-size: 1.8rem;
+        font-weight: bold;
+        margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 1px;
     }
-    
-    .dashboard-container .dashboard-form-control {
-        border-radius: 10px;
-        border: 2px solid #e9ecef;
-        padding: 0.75rem 1rem;
-        transition: all 0.3s ease;
+
+    .meeting-info {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 6px;
+        padding: 10px;
+        margin-top: 15px;
+        display: inline-block;
     }
-    
-    .dashboard-container .dashboard-form-control:focus {
-        border-color: #667eea;
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+
+    .date-section {
+        background: var(--industrial-gray);
+        color: white;
+        padding: 15px 0;
     }
-    
-    .dashboard-container .dashboard-filter-buttons {
-        display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
+
+    .date-cards {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 0 20px;
     }
-    
-    .dashboard-container .dashboard-filter-btn {
-        border-radius: 25px;
-        padding: 0.5rem 1.5rem;
-        border: 2px solid #e9ecef;
+
+    .date-card {
         background: white;
-        color: #6c757d;
-        transition: all 0.3s ease;
+        color: var(--industrial-gray);
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .date-card-title {
+        font-weight: bold;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        color: var(--industrial-blue);
+        margin-bottom: 5px;
+    }
+
+    .date-value {
+        font-size: 1.1rem;
+        font-weight: 600;
+    }
+
+    .action-toolbar {
+        background: white;
+        border-bottom: 2px solid var(--industrial-border);
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .section-container {
+        margin: 20px;
+    }
+
+    .section-header {
+        background: var(--industrial-gray);
+        color: white;
+        padding: 12px 20px;
+        border-radius: 6px 6px 0 0;
+        margin: 0;
+        font-weight: 600;
+        text-transform: uppercase;
+        font-size: 0.95rem;
+        letter-spacing: 0.5px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .section-controls {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    /* Inline editing styles */
+    .editable-field {
+        position: relative;
+        cursor: pointer;
+        padding: 4px 6px;
+        border-radius: 3px;
+        transition: all 0.2s;
+        min-width: 40px;
+        min-height: 18px;
+        display: inline-block;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
+        white-space: normal;
+    }
+
+    .editable-field:hover {
+        background-color: var(--edit-highlight) !important;
+    }
+
+    .editable-field.editing {
+        background-color: white !important;
+        border: 2px solid var(--industrial-blue) !important;
+        padding: 4px 6px !important;
+    }
+
+    .editable-field input,
+    .editable-field select,
+    .editable-field textarea {
+        border: none;
+        background: transparent;
+        width: 100%;
+        font-size: inherit;
+        font-family: inherit;
+        color: inherit;
+        outline: none;
+        padding: 0;
+        margin: 0;
+        min-width: 30px;
+    }
+
+    .editable-field textarea {
+        resize: vertical;
+        min-height: 30px;
+        max-height: 80px;
+    }
+
+    .production-table .editable-field {
+        padding: 2px 4px;
+        min-width: 30px;
+        font-size: 0.8rem;
+    }
+
+    .plan-table .editable-field {
+        padding: 4px 6px;
+        min-width: 40px;
+        font-size: 0.85rem;
+    }
+
+    .edit-mode-indicator {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--warning-orange);
+        color: white;
+        padding: 10px 15px;
+        border-radius: 6px;
+        font-weight: 600;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .edit-mode-indicator.active {
+        display: block;
+    }
+
+    /* Override Bootstrap table styles */
+    .production-table {
+        width: 100%;
+        border-collapse: collapse !important;
+        margin: 0;
+        background: white;
+        font-size: 0.85rem;
+        table-layout: fixed;
+    }
+
+    .production-table th {
+        background: var(--industrial-blue) !important;
+        color: white !important;
+        padding: 8px 6px !important;
+        text-align: center;
+        font-weight: 600;
+        border: 1px solid #1e40af !important;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    .production-table td {
+        padding: 6px 4px !important;
+        border: 1px solid var(--industrial-border) !important;
+        text-align: center;
+        vertical-align: middle;
+        background: white;
+        font-size: 0.8rem;
+        word-wrap: break-word;
+        max-width: 0;
+        overflow: hidden;
+    }
+
+    .line-name-cell {
+        background: var(--industrial-gray) !important;
+        color: white !important;
+        font-weight: 600 !important;
+        text-align: left !important;
+        padding-left: 8px !important;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        width: 120px;
+        min-width: 100px;
+    }
+
+    .line-name-cell .editable-field {
+        color: white !important;
+        background: transparent !important;
+    }
+
+    .line-name-cell .editable-field:hover {
+        background: rgba(255, 255, 255, 0.1) !important;
+    }
+
+    .shift-header-a {
+        background: var(--shift-a-color) !important;
+        color: white !important;
+    }
+
+    .shift-header-b {
+        background: var(--shift-b-color) !important;
+        color: white !important;
+    }
+
+    .shift-header-c {
+        background: var(--shift-c-color) !important;
+        color: white !important;
+    }
+
+    /* Override Bootstrap table styles for plan tables */
+    .plan-table {
+        width: 100%;
+        border-collapse: collapse !important;
+        background: white;
+        font-size: 0.9rem;
+        table-layout: auto;
+    }
+
+    .plan-table th {
+        background: var(--industrial-blue) !important;
+        color: white !important;
+        padding: 10px 8px !important;
+        text-align: center;
+        font-weight: 600;
+        border: 1px solid #1e40af !important;
+        text-transform: uppercase;
+        font-size: 0.8rem;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    .plan-table td {
+        padding: 8px 6px !important;
+        border: 1px solid var(--industrial-border) !important;
+        text-align: center;
+        vertical-align: middle;
+        background: white;
+        font-size: 0.85rem;
+    }
+
+    .plan-table tbody tr:nth-child(even) td {
+        background-color: #f8fafc !important;
+    }
+
+    .plan-table tbody tr:hover td {
+        background-color: #e0f2fe !important;
+    }
+
+    .qty-value {
+        font-weight: 600;
+        color: var(--industrial-blue);
+    }
+
+    .status-badge {
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        display: inline-block;
+    }
+
+    .badge-customer {
+        background: var(--industrial-blue);
+        color: white;
+    }
+
+    .badge-type {
+        background: var(--warning-orange);
+        color: white;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #6b7280;
+        font-style: italic;
+        background: white;
+        border-radius: 0 0 6px 6px;
+    }
+
+    /* Override Bootstrap button styles */
+    .btn-industrial {
+        background: var(--industrial-blue) !important;
+        border: none !important;
+        color: white !important;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-weight: 500;
+        text-decoration: none !important;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+        font-size: 0.9rem;
         cursor: pointer;
     }
-    
-    .dashboard-container .dashboard-filter-btn.active {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        color: white;
-        border-color: #667eea;
+
+    .btn-industrial:hover {
+        background: #1d4ed8 !important;
+        color: white !important;
+        text-decoration: none !important;
+        transform: translateY(-1px);
     }
-    
-    .dashboard-container .dashboard-filter-btn:hover {
-        border-color: #667eea;
-        color: #667eea;
+
+    .btn-export {
+        background: var(--success-green) !important;
     }
-    
-    .dashboard-container .dashboard-date-badge {
-        background: #f8f9fa;
-        border-radius: 10px;
-        padding: 0.5rem;
-        text-align: center;
-        min-width: 60px;
+
+    .btn-export:hover {
+        background: #059669 !important;
     }
-    
-    .dashboard-container .dashboard-stats-grid {
+
+    .btn-secondary-industrial {
+        background: #6b7280 !important;
+    }
+
+    .btn-secondary-industrial:hover {
+        background: #4b5563 !important;
+    }
+
+    .btn-warning-industrial {
+        background: var(--warning-orange) !important;
+    }
+
+    .btn-warning-industrial:hover {
+        background: #d97706 !important;
+    }
+
+    .btn-small {
+        padding: 4px 8px;
+        font-size: 0.8rem;
+    }
+
+    .metrics-row {
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-        gap: 2rem;
-        margin-bottom: 3rem;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 15px;
+        margin: 20px;
+        padding: 0;
     }
-    
+
+    .metric-card {
+        background: white;
+        border: 1px solid var(--industrial-border);
+        border-radius: 6px;
+        padding: 15px;
+        text-align: center;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .metric-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: var(--industrial-blue);
+    }
+
+    .metric-label {
+        font-size: 0.8rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        margin-top: 5px;
+    }
+
+    .no-data {
+        color: #9ca3af !important;
+        font-style: italic;
+    }
+
+    .add-row-btn {
+        background: var(--success-green);
+        color: white;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .add-row-btn:hover {
+        background: #059669;
+    }
+
+    .delete-row-btn {
+        background: var(--danger-red);
+        color: white;
+        border: none;
+        padding: 2px 6px;
+        border-radius: 3px;
+        font-size: 0.7rem;
+        cursor: pointer;
+    }
+
+    .delete-row-btn:hover {
+        background: #dc2626;
+    }
+
+    .save-indicator {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: var(--success-green);
+        color: white;
+        padding: 10px 15px;
+        border-radius: 6px;
+        font-weight: 600;
+        z-index: 1000;
+        display: none;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    .save-indicator.show {
+        display: block;
+        animation: slideIn 0.3s ease-in-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+
+    /* Mobile responsiveness */
     @media (max-width: 768px) {
-        .dashboard-container .dashboard-stats-grid {
+        .container {
+            padding: 0 10px !important;
+        }
+        
+        .planning-board-container {
+            margin: 10px auto;
+            border-radius: 4px;
+        }
+        
+        .date-cards {
             grid-template-columns: 1fr;
+            gap: 10px;
+            padding: 0 10px;
         }
         
-        .dashboard-container .dashboard-header {
-            padding: 1.5rem 0;
+        .action-toolbar {
+            flex-direction: column;
+            gap: 10px;
+            text-align: center;
+        }
+
+        .production-table {
+            font-size: 0.7rem;
+            min-width: 800px;
+        }
+
+        .production-table th,
+        .production-table td {
+            padding: 4px 2px !important;
+            font-size: 0.65rem;
+        }
+
+        .plan-table {
+            font-size: 0.8rem;
+        }
+
+        .plan-table th,
+        .plan-table td {
+            padding: 6px 4px !important;
+            font-size: 0.75rem;
         }
         
-        .dashboard-container .dashboard-stats-number {
-            font-size: 2.5rem;
+        .section-container {
+            margin: 10px;
         }
         
-        .dashboard-container .dashboard-filter-buttons {
-            justify-content: center;
+        .metrics-row {
+            grid-template-columns: repeat(2, 1fr);
+            margin: 10px;
+        }
+
+        .section-header {
+            flex-direction: column;
+            gap: 10px;
+            text-align: center;
+        }
+
+        .editable-field {
+            min-width: 25px;
+            padding: 2px 3px;
+            font-size: 0.7rem;
+        }
+
+        .table-responsive {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+    }
+
+    @media print {
+        .action-toolbar,
+        .edit-mode-indicator,
+        .save-indicator,
+        .add-row-btn,
+        .delete-row-btn,
+        .section-controls {
+            display: none !important;
+        }
+        
+        .planning-board-container {
+            box-shadow: none;
+        }
+        
+        .section-container {
+            margin: 10px 0;
+        }
+        
+        body {
+            background-color: white !important;
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="dashboard-container">
-    <div class="dashboard-header">
-        <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-8">
-                    <h1 class="display-4 mb-2">Production Planning Dashboard</h1>
-                    <p class="lead mb-0">Manage your production schedules and planning boards efficiently</p>
-                </div>
-                <div class="col-lg-4 text-lg-end">
-                    <a href="{% url 'planning_board:create' %}" class="btn btn-light btn-lg">
-                        <i class="fas fa-plus me-2"></i> Create New Board
-                    </a>
-                </div>
+<div class="edit-mode-indicator" id="editModeIndicator">
+    📝 Edit Mode Active - Click fields to edit, click outside to save
+</div>
+
+<div class="save-indicator" id="saveIndicator">
+    ✓ Changes saved successfully!
+</div>
+
+<div class="planning-board-container">
+    <!-- Header Section -->
+    <div class="board-header">
+        <h1 class="board-title editable-field" 
+            data-field="title" 
+            data-type="text" 
+            data-value="{{ board.title }}">{{ board.title }}</h1>
+        {% if board.meeting_time %}
+        <div class="meeting-info">
+            <i class="fas fa-clock"></i> Meeting Time: 
+            <span class="editable-field" 
+                  data-field="meeting_time" 
+                  data-type="time" 
+                  data-value="{{ board.meeting_time|time:'H:i' }}">{{ board.meeting_time|time:"H:i" }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Date Section -->
+    <div class="date-section">
+        <div class="date-cards">
+            <div class="date-card">
+                <div class="date-card-title">Today</div>
+                <div class="date-value editable-field" 
+                     data-field="today_date" 
+                     data-type="date" 
+                     data-value="{{ board.today_date|date:'Y-m-d' }}">{{ board.today_date|date:"M d, Y" }}</div>
+            </div>
+            <div class="date-card">
+                <div class="date-card-title">Tomorrow</div>
+                <div class="date-value editable-field" 
+                     data-field="tomorrow_date" 
+                     data-type="date" 
+                     data-value="{{ board.tomorrow_date|date:'Y-m-d' }}">{{ board.tomorrow_date|date:"M d, Y" }}</div>
+            </div>
+            <div class="date-card">
+                <div class="date-card-title">Next Day</div>
+                <div class="date-value editable-field" 
+                     data-field="next_day_date" 
+                     data-type="date" 
+                     data-value="{{ board.next_day_date|date:'Y-m-d' }}">{{ board.next_day_date|date:"M d, Y" }}</div>
             </div>
         </div>
     </div>
 
-    <!-- Statistics Cards -->
-    <div class="dashboard-stats-grid">
-        <div class="dashboard-stats-card">
-            <div class="card-body">
-                <div class="dashboard-stats-number">{{ total_boards }}</div>
-                <div class="dashboard-stats-label">Total Planning Boards</div>
-                <i class="fas fa-clipboard-list dashboard-stats-icon"></i>
-            </div>
+    <!-- Action Toolbar -->
+    <div class="action-toolbar">
+        <div>
+            <strong>Created by:</strong> {{ board.created_by.get_full_name|default:board.created_by.username }} 
+            <span style="color: #6b7280;">on {{ board.created_at|date:"M d, Y H:i" }}</span>
         </div>
-        
-        <div class="dashboard-stats-card">
-            <div class="card-body">
-                <div class="dashboard-stats-number">{{ total_production_lines }}</div>
-                <div class="dashboard-stats-label">Production Lines</div>
-                <i class="fas fa-industry dashboard-stats-icon"></i>
-            </div>
-        </div>
-        
-        <div class="dashboard-stats-card">
-            <div class="card-body">
-                <div class="dashboard-stats-number">{{ recent_boards.count }}</div>
-                <div class="dashboard-stats-label">Recent Boards</div>
-                <i class="fas fa-clock dashboard-stats-icon"></i>
-            </div>
+        <div>
+            <button id="toggleEditMode" class="btn-industrial">
+                <i class="fas fa-edit"></i> <span id="editModeText">Enable Edit Mode</span>
+            </button>
+            <button id="saveAllChanges" class="btn-industrial btn-export" style="display: none;">
+                <i class="fas fa-save"></i> Save All Changes
+            </button>
+            <a href="{% url 'planning_board:export_excel' board.pk %}" class="btn-industrial btn-export">
+                <i class="fas fa-download"></i> Export Excel
+            </a>
+            <a href="{% url 'planning_board:list' %}" class="btn-industrial btn-secondary-industrial">
+                <i class="fas fa-arrow-left"></i> Back to List
+            </a>
         </div>
     </div>
 
-    <!-- Filter Section -->
-    <div class="dashboard-filter-section">
-        <div class="row align-items-center">
-            <div class="col-md-6">
-                <h5 class="mb-3">Filter Planning Boards</h5>
-                <div class="dashboard-filter-buttons">
-                    <button class="dashboard-filter-btn active" data-filter="today">Today</button>
-                    <button class="dashboard-filter-btn" data-filter="week">This Week</button>
-                    <button class="dashboard-filter-btn" data-filter="month">This Month</button>
-                    <button class="dashboard-filter-btn" data-filter="all">All Time</button>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="row">
-                    <div class="col-md-6">
-                        <label class="form-label">From Date</label>
-                        <input type="date" class="form-control dashboard-form-control" id="fromDate" name="from_date">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label">To Date</label>
-                        <input type="date" class="form-control dashboard-form-control" id="toDate" name="to_date">
-                    </div>
-                </div>
-            </div>
+    <!-- Summary Metrics -->
+    <div class="metrics-row">
+        <div class="metric-card">
+            <div class="metric-value">{{ board.production_lines.count }}</div>
+            <div class="metric-label">Production Lines</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">{{ board.tomorrow_plans.count }}</div>
+            <div class="metric-label">Tomorrow Plans</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">{{ board.critical_parts.count }}</div>
+            <div class="metric-label">Critical Parts</div>
+        </div>
+        <div class="metric-card">
+            <div class="metric-value">{{ board.afm_plans.count|add:board.spd_plans.count }}</div>
+            <div class="metric-label">Total Plans</div>
         </div>
     </div>
 
-    <!-- Main Table -->
-    <div class="dashboard-main-card">
-        <div class="card-header">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <h4 class="mb-0">Planning Boards</h4>
-                    <p class="mb-0 opacity-75">Manage and track your production planning boards</p>
-                </div>
-                <div class="col-md-4 text-md-end">
-                    <div class="dropdown">
-                        <button class="btn btn-light dropdown-toggle" type="button" id="exportDropdown" data-bs-toggle="dropdown">
-                            <i class="fas fa-download me-2"></i> Export
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-file-excel me-2"></i> Excel</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-file-pdf me-2"></i> PDF</a></li>
-                            <li><a class="dropdown-item" href="#"><i class="fas fa-file-csv me-2"></i> CSV</a></li>
-                        </ul>
-                    </div>
-                </div>
+    <!-- Today Assembly Plan (Production Lines) -->
+    <div class="section-container">
+        <h2 class="section-header">
+            <span><i class="fas fa-industry"></i> Today Assembly Plan</span>
+            <div class="section-controls">
+                <button class="add-row-btn" onclick="addProductionLineRow()" style="display: none;">
+                    <i class="fas fa-plus"></i> Add Line
+                </button>
             </div>
-        </div>
-        <div class="card-body p-0">
-            {% if recent_boards %}
-                <div class="table-responsive">
-                    <table class="table dashboard-table" id="planningBoardsTable">
-                        <thead>
-                            <tr>
-                                <th>
-                                    <i class="fas fa-calendar-alt me-2"></i>Date
-                                </th>
-                                <th>
-                                    <i class="fas fa-file-alt me-2"></i>Title
-                                </th>
-                                <th>
-                                    <i class="fas fa-clock me-2"></i>Meeting Time
-                                </th>
-                                <th>
-                                    <i class="fas fa-plus-circle me-2"></i>Created
-                                </th>
-                                <th>
-                                    <i class="fas fa-user me-2"></i>Status
-                                </th>
-                                <th>
-                                    <i class="fas fa-cogs me-2"></i>Actions
-                                </th>
+        </h2>
+        {% if board.production_lines.exists %}
+            <div class="table-responsive">
+                <table class="production-table" id="productionTable">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" style="width: 120px; vertical-align: middle;">Line Number</th>
+                            <th colspan="6" class="shift-header-a">A Shift</th>
+                            <th colspan="6" class="shift-header-b">B Shift</th>
+                            <th colspan="5" class="shift-header-c">C Shift</th>
+                            <th rowspan="2" style="width: 40px;">Actions</th>
+                        </tr>
+                        <tr>
+                            <!-- A Shift Headers -->
+                            <th class="shift-header-a" style="width: 80px;">Model</th>
+                            <th class="shift-header-a" style="width: 50px;">Plan</th>
+                            <th class="shift-header-a" style="width: 50px;">Actual</th>
+                            <th class="shift-header-a" style="width: 50px;">Change</th>
+                            <th class="shift-header-a" style="width: 60px;">Time</th>
+                            <th class="shift-header-a" style="width: 100px;">Remarks</th>
+                            <!-- B Shift Headers -->
+                            <th class="shift-header-b" style="width: 80px;">Model</th>
+                            <th class="shift-header-b" style="width: 50px;">Plan</th>
+                            <th class="shift-header-b" style="width: 50px;">Actual</th>
+                            <th class="shift-header-b" style="width: 50px;">Change</th>
+                            <th class="shift-header-b" style="width: 60px;">Time</th>
+                            <th class="shift-header-b" style="width: 100px;">Remarks</th>
+                            <!-- C Shift Headers -->
+                            <th class="shift-header-c" style="width: 80px;">Model</th>
+                            <th class="shift-header-c" style="width: 50px;">Plan</th>
+                            <th class="shift-header-c" style="width: 50px;">Actual</th>
+                            <th class="shift-header-c" style="width: 50px;">Change</th>
+                            <th class="shift-header-c" style="width: 100px;">Remarks</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for line in board.production_lines.all %}
+                            <tr data-id="{{ line.id }}" data-type="production_line">
+                                <td class="line-name-cell">
+                                    <div class="editable-field" data-field="line_number" data-type="text">{{ line.line_number }}</div>
+                                </td>
+                                <!-- A Shift Data -->
+                                <td><div class="editable-field" data-field="a_shift_model" data-type="text">{{ line.a_shift_model|default:"-" }}</div></td>
+                                <td><div class="editable-field qty-value" data-field="a_shift_plan" data-type="number">{{ line.a_shift_plan|default:"-" }}</div></td>
+                                <td><div class="editable-field qty-value" data-field="a_shift_actual" data-type="number">{{ line.a_shift_actual|default:"-" }}</div></td>
+                                <td><div class="editable-field qty-value" data-field="a_shift_plan_change" data-type="number">{{ line.a_shift_plan_change|default:"-" }}</div></td>
+                                <td><div class="editable-field" data-field="a_shift_time" data-type="time" data-value="{{ line.a_shift_time|time:'H:i' }}">{{ line.a_shift_time|time:"H:i"|default:"-" }}</div></td>
+                                <td style="text-align: left;"><div class="editable-field" data-field="a_shift_remarks" data-type="textarea">{{ line.a_shift_remarks|default:"-" }}</div></td>
+                                <!-- B Shift Data -->
+                                <td><div class="editable-field" data-field="b_shift_model" data-type="text">{{ line.b_shift_model|default:"-" }}</div></td>
+                                <td><div class="editable-field qty-value" data-field="b_shift_plan" data-type="number">{{ line.b_shift_plan|default:"-" }}</div></td>
+                                <td><div class="editable-field qty-value" data-field="b_shift_actual" data-type="number">{{ line.b_shift_actual|default:"-" }}</div></td>
+                                <td><div class="editable-field qty-value" data-field="b_shift_plan_change" data-type="number">{{ line.b_shift_plan_change|default:"-" }}</div></td>
+                                <td><div class="editable-field" data-field="b_shift_time" data-type="time" data-value="{{ line.b_shift_time|time:'H:i' }}">{{ line.b_shift_time|time:"H:i"|default:"-" }}</div></td>
+                                <td style="text-align: left;"><div class="editable-field" data-field="b_shift_remarks" data-type="textarea">{{ line.b_shift_remarks|default:"-" }}</div></td>
+                                <!-- C Shift Data -->
+                                <td><div class="editable-field" data-field="c_shift_model" data-type="text">{{ line.c_shift_model|default:"-" }}</div></td>
+                                <td><div class="editable-field qty-value" data-field="c_shift_plan" data-type="number">{{ line.c_shift_plan|default:"-" }}</div></td>
+                                <td><div class="editable-field qty-value" data-field="c_shift_actual" data-type="number">{{ line.c_shift_actual|default:"-" }}</div></td>
+                                <td><div class="editable-field qty-value" data-field="c_shift_plan_change" data-type="number">{{ line.c_shift_plan_change|default:"-" }}</div></td>
+                                <td style="text-align: left;"><div class="editable-field" data-field="c_shift_remarks" data-type="textarea">{{ line.c_shift_remarks|default:"-" }}</div></td>
+                                <td style="text-align: center;">
+                                    <button class="delete-row-btn" onclick="deleteRow(this, 'production_line', {{ line.id }})" style="display: none;">×</button>
+                                </td>
                             </tr>
-                        </thead>
-                        <tbody>
-                            {% for board in recent_boards %}
-                                <tr data-date="{{ board.today_date|date:'Y-m-d' }}">
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="dashboard-date-badge me-3">
-                                                <div class="text-muted small">{{ board.today_date|date:"M" }}</div>
-                                                <div class="h5 mb-0">{{ board.today_date|date:"d" }}</div>
-                                            </div>
-                                            <div>
-                                                <div class="fw-bold">{{ board.today_date|date:"l" }}</div>
-                                                <div class="text-muted small">{{ board.today_date|date:"Y" }}</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <div class="fw-bold">{{ board.title|truncatechars:40 }}</div>
-                                        {% if board.description %}
-                                            <div class="text-muted small">{{ board.description|truncatechars:60 }}</div>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        {% if board.meeting_time %}
-                                            <span class="badge bg-success">{{ board.meeting_time }}</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">Not Set</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div class="text-muted small">{{ board.created_at|date:"M d, Y" }}</div>
-                                        <div class="text-muted small">{{ board.created_at|date:"H:i" }}</div>
-                                    </td>
-                                    <td>
-                                        {% if board.today_date|date:"Y-m-d" == today %}
-                                            <span class="badge bg-primary">Today</span>
-                                        {% elif board.today_date|date:"Y-m-d" > today %}
-                                            <span class="badge bg-warning">Upcoming</span>
-                                        {% else %}
-                                            <span class="badge bg-secondary">Past</span>
-                                        {% endif %}
-                                    </td>
-                                    <td>
-                                        <div class="btn-group" role="group">
-                                            <a href="{% url 'planning_board:detail' board.pk %}" class="btn btn-sm dashboard-btn-action dashboard-btn-primary" title="View Details">
-                                                <i class="fas fa-eye"></i>
-                                            </a>
-                                            <a href="{% url 'planning_board:edit' board.pk %}" class="btn btn-sm dashboard-btn-action dashboard-btn-success" title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </a>
-                                            <button class="btn btn-sm dashboard-btn-action dashboard-btn-info" title="Duplicate" onclick="duplicateBoard({{ board.pk }})">
-                                                <i class="fas fa-copy"></i>
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            {% else %}
-                <div class="dashboard-empty-state">
-                    <i class="fas fa-clipboard-list dashboard-empty-icon"></i>
-                    <h3>No Planning Boards Found</h3>
-                    <p class="mb-4">Get started by creating your first planning board or uploading an Excel file.</p>
-                    <div class="d-flex justify-content-center gap-3">
-                        <a href="{% url 'planning_board:create' %}" class="btn dashboard-btn-primary btn-lg">
-                            <i class="fas fa-plus me-2"></i> Create New Board
-                        </a>
-                        <a href="{% url 'planning_board:excel_upload' %}" class="btn dashboard-btn-success btn-lg">
-                            <i class="fas fa-file-excel me-2"></i> Upload Excel
-                        </a>
-                    </div>
-                </div>
-            {% endif %}
-        </div>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-industry fa-3x mb-3" style="color: #d1d5db;"></i>
+                <p>No production lines configured for today.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Tomorrow Assembly Plan -->
+    <div class="section-container">
+        <h2 class="section-header">
+            <span><i class="fas fa-calendar-plus"></i> Tomorrow Assembly Plan</span>
+            <div class="section-controls">
+                <button class="add-row-btn" onclick="addTomorrowPlanRow()" style="display: none;">
+                    <i class="fas fa-plus"></i> Add Plan
+                </button>
+            </div>
+        </h2>
+        {% if board.tomorrow_plans.exists %}
+            <div class="table-responsive">
+                <table class="plan-table" id="tomorrowTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">Model</th>
+                            <th>A Shift</th>
+                            <th>B Shift</th>
+                            <th>C Shift</th>
+                            <th style="width: 200px;">Remarks</th>
+                            <th style="width: 30px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for plan in board.tomorrow_plans.all %}
+                            <tr data-id="{{ plan.id }}" data-type="tomorrow_plan">
+                                <td style="text-align: left; font-weight: 600;"><div class="editable-field" data-field="model" data-type="text">{{ plan.model }}</div></td>
+                                <td><div class="editable-field qty-value" data-field="a_shift" data-type="number">{{ plan.a_shift|default:"-" }}</div></td>
+                                <td><div class="editable-field qty-value" data-field="b_shift" data-type="number">{{ plan.b_shift|default:"-" }}</div></td>
+                                <td><div class="editable-field qty-value" data-field="c_shift" data-type="number">{{ plan.c_shift|default:"-" }}</div></td>
+                                <td style="text-align: left;"><div class="editable-field" data-field="remarks" data-type="textarea">{{ plan.remarks|default:"-" }}</div></td>
+                                <td style="text-align: center;">
+                                    <button class="delete-row-btn" onclick="deleteRow(this, 'tomorrow_plan', {{ plan.id }})" style="display: none;">×</button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-calendar-plus fa-2x mb-2" style="color: #d1d5db;"></i>
+                <p>No plans scheduled for tomorrow.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Next Day Assembly Plan -->
+    <div class="section-container">
+        <h2 class="section-header">
+            <span><i class="fas fa-calendar-week"></i> Next Day Assembly Plan</span>
+            <div class="section-controls">
+                <button class="add-row-btn" onclick="addNextDayPlanRow()" style="display: none;">
+                    <i class="fas fa-plus"></i> Add Plan
+                </button>
+            </div>
+        </h2>
+        {% if board.next_day_plans.exists %}
+            <div class="table-responsive">
+                <table class="plan-table" id="nextDayTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">Model</th>
+                            <th>A Shift</th>
+                            <th>B Shift</th>
+                            <th>C Shift</th>
+                            <th style="width: 200px;">Remarks</th>
+                            <th style="width: 30px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for plan in board.next_day_plans.all %}
+                            <tr data-id="{{ plan.id }}" data-type="next_day_plan">
+                                <td style="text-align: left; font-weight: 600;"><div class="editable-field" data-field="model" data-type="text">{{ plan.model }}</div></td>
+                                <td><div class="editable-field qty-value" data-field="a_shift" data-type="number">{{ plan.a_shift|default:"-" }}</div></td>
+                                <td><div class="editable-field qty-value" data-field="b_shift" data-type="number">{{ plan.b_shift|default:"-" }}</div></td>
+                                <td><div class="editable-field qty-value" data-field="c_shift" data-type="number">{{ plan.c_shift|default:"-" }}</div></td>
+                                <td style="text-align: left;"><div class="editable-field" data-field="remarks" data-type="textarea">{{ plan.remarks|default:"-" }}</div></td>
+                                <td style="text-align: center;">
+                                    <button class="delete-row-btn" onclick="deleteRow(this, 'next_day_plan', {{ plan.id }})" style="display: none;">×</button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-calendar-week fa-2x mb-2" style="color: #d1d5db;"></i>
+                <p>No plans scheduled for the day after tomorrow.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Critical Part Status -->
+    <div class="section-container">
+        <h2 class="section-header">
+            <span><i class="fas fa-exclamation-triangle"></i> Critical Part Status</span>
+            <div class="section-controls">
+                <button class="add-row-btn" onclick="addCriticalPartRow()" style="display: none;">
+                    <i class="fas fa-plus"></i> Add Part
+                </button>
+            </div>
+        </h2>
+        {% if board.critical_parts.exists %}
+            <div class="table-responsive">
+                <table class="plan-table" id="criticalPartsTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 200px;">Part Name</th>
+                            <th style="width: 150px;">Supplier</th>
+                            <th>Plan Qty</th>
+                            <th style="width: 150px;">Receiving Time</th>
+                            <th>Remarks</th>
+                            <th style="width: 30px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for part in board.critical_parts.all %}
+                            <tr data-id="{{ part.id }}" data-type="critical_part">
+                                <td style="text-align: left; font-weight: 600;"><div class="editable-field" data-field="part_name" data-type="text">{{ part.part_name }}</div></td>
+                                <td style="text-align: left;"><div class="editable-field" data-field="supplier" data-type="text">{{ part.supplier|default:"-" }}</div></td>
+                                <td><div class="editable-field qty-value" data-field="plan_qty" data-type="number">{{ part.plan_qty }}</div></td>
+                                <td><div class="editable-field" data-field="receiving_time" data-type="datetime" data-value="{{ part.receiving_time|date:'Y-m-d\TH:i' }}">{{ part.receiving_time|date:"M d, H:i"|default:"-" }}</div></td>
+                                <td style="text-align: left;"><div class="editable-field" data-field="remarks" data-type="textarea">{{ part.remarks|default:"-" }}</div></td>
+                                <td style="text-align: center;">
+                                    <button class="delete-row-btn" onclick="deleteRow(this, 'critical_part', {{ part.id }})" style="display: none;">×</button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-exclamation-triangle fa-2x mb-2" style="color: #d1d5db;"></i>
+                <p>No critical parts identified.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- AFM Plans -->
+    <div class="section-container">
+        <h2 class="section-header">
+            <span><i class="fas fa-cogs"></i> AFM Plans</span>
+            <div class="section-controls">
+                <button class="add-row-btn" onclick="addAFMPlanRow()" style="display: none;">
+                    <i class="fas fa-plus"></i> Add AFM Plan
+                </button>
+            </div>
+        </h2>
+        {% if board.afm_plans.exists %}
+            <div class="table-responsive">
+                <table class="plan-table" id="afmPlansTable">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th style="width: 200px;">Part Name</th>
+                            <th>Part Number</th>
+                            <th>Plan Qty</th>
+                            <th>Remarks</th>
+                            <th style="width: 30px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for plan in board.afm_plans.all %}
+                            <tr data-id="{{ plan.id }}" data-type="afm_plan">
+                                <td>
+                                    <div class="editable-field" data-field="plan_type" data-type="select" data-options="FCIN,IU" data-value="{{ plan.plan_type }}">
+                                        <span class="status-badge badge-type">{{ plan.get_plan_type_display }}</span>
+                                    </div>
+                                </td>
+                                <td style="text-align: left; font-weight: 600;"><div class="editable-field" data-field="part_name" data-type="text">{{ plan.part_name }}</div></td>
+                                <td><div class="editable-field" data-field="part_number" data-type="text">{{ plan.part_number|default:"-" }}</div></td>
+                                <td><div class="editable-field qty-value" data-field="plan_qty" data-type="number">{{ plan.plan_qty }}</div></td>
+                                <td style="text-align: left;"><div class="editable-field" data-field="remarks" data-type="textarea">{{ plan.remarks|default:"-" }}</div></td>
+                                <td style="text-align: center;">
+                                    <button class="delete-row-btn" onclick="deleteRow(this, 'afm_plan', {{ plan.id }})" style="display: none;">×</button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-cogs fa-2x mb-2" style="color: #d1d5db;"></i>
+                <p>No AFM plans defined.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- SPD Plans -->
+    <div class="section-container">
+        <h2 class="section-header">
+            <span><i class="fas fa-users"></i> SPD Plans (Customer-wise)</span>
+            <div class="section-controls">
+                <button class="add-row-btn" onclick="addSPDPlanRow()" style="display: none;">
+                    <i class="fas fa-plus"></i> Add SPD Plan
+                </button>
+            </div>
+        </h2>
+        {% if board.spd_plans.exists %}
+            <div class="table-responsive">
+                <table class="plan-table" id="spdPlansTable">
+                    <thead>
+                        <tr>
+                            <th>Customer</th>
+                            <th style="width: 200px;">Part Name</th>
+                            <th>Part Number</th>
+                            <th>Plan Qty</th>
+                            <th>Remarks</th>
+                            <th style="width: 30px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for plan in board.spd_plans.all %}
+                            <tr data-id="{{ plan.id }}" data-type="spd_plan">
+                                <td>
+                                    <div class="editable-field" data-field="customer" data-type="select" data-options="MSIL,HMSI,IYM,HMCL" data-value="{{ plan.customer }}">
+                                        <span class="status-badge badge-customer">{{ plan.get_customer_display }}</span>
+                                    </div>
+                                </td>
+                                <td style="text-align: left; font-weight: 600;"><div class="editable-field" data-field="part_name" data-type="text">{{ plan.part_name }}</div></td>
+                                <td><div class="editable-field" data-field="part_number" data-type="text">{{ plan.part_number|default:"-" }}</div></td>
+                                <td><div class="editable-field qty-value" data-field="plan_qty" data-type="number">{{ plan.plan_qty }}</div></td>
+                                <td style="text-align: left;"><div class="editable-field" data-field="remarks" data-type="textarea">{{ plan.remarks|default:"-" }}</div></td>
+                                <td style="text-align: center;">
+                                    <button class="delete-row-btn" onclick="deleteRow(this, 'spd_plan', {{ plan.id }})" style="display: none;">×</button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-users fa-2x mb-2" style="color: #d1d5db;"></i>
+                <p>No SPD plans defined.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Other Information -->
+    <div class="section-container">
+        <h2 class="section-header">
+            <span><i class="fas fa-info-circle"></i> Other Information</span>
+            <div class="section-controls">
+                <button class="add-row-btn" onclick="addOtherInfoRow()" style="display: none;">
+                    <i class="fas fa-plus"></i> Add Info
+                </button>
+            </div>
+        </h2>
+        {% if board.other_info.exists %}
+            <div class="table-responsive">
+                <table class="plan-table" id="otherInfoTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 250px;">Part Name</th>
+                            <th>Quantity</th>
+                            <th>Target Date</th>
+                            <th>Remarks</th>
+                            <th style="width: 30px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for info in board.other_info.all %}
+                            <tr data-id="{{ info.id }}" data-type="other_info">
+                                <td style="text-align: left; font-weight: 600;"><div class="editable-field" data-field="part_name" data-type="text">{{ info.part_name }}</div></td>
+                                <td><div class="editable-field qty-value" data-field="qty" data-type="number">{{ info.qty }}</div></td>
+                                <td><div class="editable-field" data-field="target_date" data-type="date" data-value="{{ info.target_date|date:'Y-m-d' }}">{{ info.target_date|date:"M d, Y" }}</div></td>
+                                <td style="text-align: left;"><div class="editable-field" data-field="remarks" data-type="textarea">{{ info.remarks|default:"-" }}</div></td>
+                                <td style="text-align: center;">
+                                    <button class="delete-row-btn" onclick="deleteRow(this, 'other_info', {{ info.id }})" style="display: none;">×</button>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-state">
+                <i class="fas fa-info-circle fa-2x mb-2" style="color: #d1d5db;"></i>
+                <p>No additional information provided.</p>
+            </div>
+        {% endif %}
     </div>
 </div>
 
-{% endblock %}
-
-{% block extra_js %}
 <script>
+let isEditMode = false;
+let currentEditField = null;
+let pendingChanges = {};
+const boardId = {{ board.pk }};
+
+// Initialize the page
 document.addEventListener('DOMContentLoaded', function() {
-    // Set today's date as default
-    const today = new Date().toISOString().split('T')[0];
-    document.getElementById('fromDate').value = today;
-    document.getElementById('toDate').value = today;
-    
-    // Filter functionality
-    const filterButtons = document.querySelectorAll('.dashboard-filter-btn');
-    const fromDate = document.getElementById('fromDate');
-    const toDate = document.getElementById('toDate');
-    const tableRows = document.querySelectorAll('#planningBoardsTable tbody tr');
-    
-    // Apply today filter by default
-    filterByDate('today');
-    
-    filterButtons.forEach(btn => {
-        btn.addEventListener('click', function() {
-            filterButtons.forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            
-            const filter = this.dataset.filter;
-            filterByDate(filter);
-        });
-    });
-    
-    fromDate.addEventListener('change', customDateFilter);
-    toDate.addEventListener('change', customDateFilter);
-    
-    function filterByDate(filter) {
-        const today = new Date();
-        let startDate, endDate;
-        
-        switch(filter) {
-            case 'today':
-                startDate = new Date(today);
-                endDate = new Date(today);
-                break;
-            case 'week':
-                startDate = new Date(today);
-                startDate.setDate(today.getDate() - today.getDay());
-                endDate = new Date(startDate);
-                endDate.setDate(startDate.getDate() + 6);
-                break;
-            case 'month':
-                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-                endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-                break;
-            case 'all':
-                showAllRows();
-                return;
-        }
-        
-        if (filter !== 'all') {
-            fromDate.value = startDate.toISOString().split('T')[0];
-            toDate.value = endDate.toISOString().split('T')[0];
-            applyDateFilter(startDate, endDate);
-        }
-    }
-    
-    function customDateFilter() {
-        if (fromDate.value && toDate.value) {
-            const startDate = new Date(fromDate.value);
-            const endDate = new Date(toDate.value);
-            applyDateFilter(startDate, endDate);
-            
-            // Update button state
-            filterButtons.forEach(b => b.classList.remove('active'));
-        }
-    }
-    
-    function applyDateFilter(startDate, endDate) {
-        tableRows.forEach(row => {
-            const rowDate = new Date(row.dataset.date);
-            if (rowDate >= startDate && rowDate <= endDate) {
-                row.style.display = '';
-            } else {
-                row.style.display = 'none';
-            }
-        });
-    }
-    
-    function showAllRows() {
-        tableRows.forEach(row => {
-            row.style.display = '';
-        });
-    }
+    console.log('DOM loaded, initializing...');
+    initializeEditableFields();
+    setupEventListeners();
 });
 
-function duplicateBoard(boardId) {
-    if (confirm('Are you sure you want to duplicate this planning board?')) {
-        // Add your duplicate logic here
-        console.log('Duplicating board:', boardId);
+function setupEventListeners() {
+    console.log('Setting up event listeners...');
+    
+    // Toggle edit mode
+    const toggleButton = document.getElementById('toggleEditMode');
+    if (toggleButton) {
+        toggleButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleEditMode();
+        });
+        console.log('Toggle button listener added');
+    } else {
+        console.error('Toggle button not found');
+    }
+    
+    // Save all changes
+    const saveButton = document.getElementById('saveAllChanges');
+    if (saveButton) {
+        saveButton.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            saveAllChanges();
+        });
+        console.log('Save button listener added');
+    }
+    
+    // Click outside to save current field
+    document.addEventListener('click', function(e) {
+        if (currentEditField && !currentEditField.contains(e.target) && !e.target.closest('.editable-field')) {
+            saveCurrentField();
+        }
+    });
+    
+    // Prevent form submission on Enter in edit fields
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && currentEditField) {
+            e.preventDefault();
+            saveCurrentField();
+        }
+        
+        if (e.key === 'Escape' && currentEditField) {
+            e.preventDefault();
+            cancelEdit();
+        }
+    });
+}
+
+function toggleEditMode() {
+    console.log('Toggle edit mode called, current state:', isEditMode);
+    
+    isEditMode = !isEditMode;
+    const editModeText = document.getElementById('editModeText');
+    const editModeIndicator = document.getElementById('editModeIndicator');
+    const saveButton = document.getElementById('saveAllChanges');
+    const addButtons = document.querySelectorAll('.add-row-btn');
+    const deleteButtons = document.querySelectorAll('.delete-row-btn');
+    
+    console.log('Elements found:', {
+        editModeText: !!editModeText,
+        editModeIndicator: !!editModeIndicator,
+        saveButton: !!saveButton,
+        addButtons: addButtons.length,
+        deleteButtons: deleteButtons.length
+    });
+    
+    if (isEditMode) {
+        if (editModeText) editModeText.textContent = 'Disable Edit Mode';
+        if (editModeIndicator) editModeIndicator.classList.add('active');
+        if (saveButton) saveButton.style.display = 'inline-flex';
+        addButtons.forEach(btn => btn.style.display = 'inline-flex');
+        deleteButtons.forEach(btn => btn.style.display = 'inline-block');
+        enableEditableFields();
+        console.log('Edit mode enabled');
+    } else {
+        if (editModeText) editModeText.textContent = 'Enable Edit Mode';
+        if (editModeIndicator) editModeIndicator.classList.remove('active');
+        if (saveButton) saveButton.style.display = 'none';
+        addButtons.forEach(btn => btn.style.display = 'none');
+        deleteButtons.forEach(btn => btn.style.display = 'none');
+        disableEditableFields();
+        if (Object.keys(pendingChanges).length > 0) {
+            saveAllChanges();
+        }
+        console.log('Edit mode disabled');
     }
 }
+
+function initializeEditableFields() {
+    const editableFields = document.querySelectorAll('.editable-field');
+    console.log('Initializing', editableFields.length, 'editable fields');
+    
+    editableFields.forEach(field => {
+        // Remove any existing listeners
+        field.removeEventListener('click', handleFieldClick);
+        
+        // Add the click listener
+        field.addEventListener('click', handleFieldClick);
+    });
+}
+
+function handleFieldClick(e) {
+    if (isEditMode && currentEditField !== this) {
+        e.stopPropagation();
+        e.preventDefault();
+        
+        console.log('Field clicked:', this.dataset.field);
+        
+        if (currentEditField) {
+            saveCurrentField();
+        }
+        editField(this);
+    }
+}
+
+function enableEditableFields() {
+    const editableFields = document.querySelectorAll('.editable-field');
+    editableFields.forEach(field => {
+        field.classList.add('edit-mode');
+        field.style.cursor = 'pointer';
+        field.title = 'Click to edit';
+    });
+    console.log('Enabled', editableFields.length, 'editable fields');
+}
+
+function disableEditableFields() {
+    const editableFields = document.querySelectorAll('.editable-field');
+    editableFields.forEach(field => {
+        field.classList.remove('edit-mode', 'editing');
+        field.style.cursor = 'default';
+        field.title = '';
+    });
+    currentEditField = null;
+    console.log('Disabled editable fields');
+}
+
+function editField(field) {
+    if (!isEditMode) return;
+    
+    console.log('Editing field:', field.dataset.field, 'type:', field.dataset.type);
+    
+    currentEditField = field;
+    field.classList.add('editing');
+    
+    const fieldType = field.dataset.type;
+    const currentValue = field.textContent.trim();
+    const actualValue = currentValue === '-' ? '' : currentValue;
+    
+    // Store original value for cancellation
+    field.dataset.originalValue = actualValue;
+    
+    let input;
+    
+    switch (fieldType) {
+        case 'text':
+            input = document.createElement('input');
+            input.type = 'text';
+            input.value = actualValue;
+            break;
+            
+        case 'number':
+            input = document.createElement('input');
+            input.type = 'number';
+            input.value = actualValue;
+            input.step = '1';
+            break;
+            
+        case 'time':
+            input = document.createElement('input');
+            input.type = 'time';
+            input.value = field.dataset.value || '';
+            break;
+            
+        case 'date':
+            input = document.createElement('input');
+            input.type = 'date';
+            input.value = field.dataset.value || '';
+            break;
+            
+        case 'datetime':
+            input = document.createElement('input');
+            input.type = 'datetime-local';
+            input.value = field.dataset.value || '';
+            break;
+            
+        case 'textarea':
+            input = document.createElement('textarea');
+            input.value = actualValue;
+            input.rows = 2;
+            break;
+            
+        case 'select':
+            input = document.createElement('select');
+            const options = field.dataset.options.split(',');
+            const currentSelected = field.dataset.value || '';
+            options.forEach(option => {
+                const optionElement = document.createElement('option');
+                optionElement.value = option;
+                optionElement.textContent = option;
+                if (currentSelected === option || actualValue.includes(option)) {
+                    optionElement.selected = true;
+                }
+                input.appendChild(optionElement);
+            });
+            break;
+            
+        default:
+            input = document.createElement('input');
+            input.type = 'text';
+            input.value = actualValue;
+    }
+    
+    // Prevent event bubbling on input
+    input.addEventListener('click', function(e) {
+        e.stopPropagation();
+    });
+    
+    field.innerHTML = '';
+    field.appendChild(input);
+    input.focus();
+    
+    // Select all text for easy editing
+    if (input.select) {
+        input.select();
+    }
+}
+
+function saveCurrentField() {
+    if (!currentEditField) return;
+    
+    const field = currentEditField;
+    const input = field.querySelector('input, textarea, select');
+    
+    if (input) {
+        const newValue = input.value.trim();
+        const fieldName = field.dataset.field;
+        const fieldType = field.dataset.type;
+        
+        console.log('Saving field:', fieldName, 'new value:', newValue);
+        
+        // Get the row data
+        const row = field.closest('tr');
+        const rowId = row ? row.dataset.id : null;
+        const rowType = row ? row.dataset.type : 'board';
+        
+        // Store pending change
+        if (!pendingChanges[rowType]) {
+            pendingChanges[rowType] = {};
+        }
+        if (!pendingChanges[rowType][rowId || 'main']) {
+            pendingChanges[rowType][rowId || 'main'] = {};
+        }
+        pendingChanges[rowType][rowId || 'main'][fieldName] = newValue;
+        
+        // Update display value
+        updateFieldDisplay(field, newValue, fieldType);
+        
+        field.classList.remove('editing');
+        
+        // Show save indicator
+        showSaveIndicator();
+    }
+    
+    currentEditField = null;
+}
+
+function updateFieldDisplay(field, newValue, fieldType) {
+    let displayValue = newValue || '-';
+    
+    if (fieldType === 'date' && newValue) {
+        const date = new Date(newValue);
+        displayValue = date.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric' 
+        });
+        field.dataset.value = newValue;
+    } else if (fieldType === 'time' && newValue) {
+        displayValue = newValue;
+        field.dataset.value = newValue;
+    } else if (fieldType === 'datetime' && newValue) {
+        const date = new Date(newValue);
+        displayValue = date.toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        field.dataset.value = newValue;
+    } else if (fieldType === 'select' && newValue) {
+        const fieldName = field.dataset.field;
+        const badgeClass = fieldName.includes('customer') ? 'badge-customer' : 'badge-type';
+        displayValue = `<span class="status-badge ${badgeClass}">${newValue}</span>`;
+        field.dataset.value = newValue;
+    }
+    
+    field.innerHTML = displayValue;
+}
+
+function cancelEdit() {
+    if (!currentEditField) return;
+    
+    const field = currentEditField;
+    const originalValue = field.dataset.originalValue || '';
+    
+    // Restore original display
+    field.innerHTML = originalValue || '-';
+    field.classList.remove('editing');
+    
+    currentEditField = null;
+}
+
+function showSaveIndicator() {
+    const indicator = document.getElementById('saveIndicator');
+    if (indicator) {
+        indicator.classList.add('show');
+        setTimeout(() => {
+            indicator.classList.remove('show');
+        }, 2000);
+    }
+}
+
+function saveAllChanges() {
+    console.log('Saving all changes:', pendingChanges);
+    
+    if (Object.keys(pendingChanges).length === 0) {
+        showSaveIndicator();
+        return;
+    }
+    
+    // Show loading state
+    const saveButton = document.getElementById('saveAllChanges');
+    const originalText = saveButton.innerHTML;
+    saveButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+    saveButton.disabled = true;
+    
+    // Send AJAX request to save changes
+    fetch(`{% url 'planning_board:inline_update' board.pk %}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
+        body: JSON.stringify(pendingChanges)
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log('Save response:', data);
+        if (data.success) {
+            pendingChanges = {};
+            showSaveIndicator();
+        } else {
+            alert('Error saving changes: ' + (data.error || 'Unknown error'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error saving changes. Please try again.');
+    })
+    .finally(() => {
+        saveButton.innerHTML = originalText;
+        saveButton.disabled = false;
+    });
+}
+
+// Add row functions
+function addProductionLineRow() {
+    const tableId = 'productionTable';
+    const table = document.getElementById(tableId);
+    const tbody = table.querySelector('tbody');
+    const newRow = document.createElement('tr');
+    const tempId = 'new_' + Date.now();
+    
+    newRow.dataset.type = 'production_line';
+    newRow.dataset.id = tempId;
+    
+    newRow.innerHTML = `
+        <td class="line-name-cell">
+            <div class="editable-field" data-field="line_number" data-type="text">New Line</div>
+        </td>
+        <!-- A Shift Data -->
+        <td><div class="editable-field" data-field="a_shift_model" data-type="text">-</div></td>
+        <td><div class="editable-field qty-value" data-field="a_shift_plan" data-type="number">-</div></td>
+        <td><div class="editable-field qty-value" data-field="a_shift_actual" data-type="number">-</div></td>
+        <td><div class="editable-field qty-value" data-field="a_shift_plan_change" data-type="number">-</div></td>
+        <td><div class="editable-field" data-field="a_shift_time" data-type="time">-</div></td>
+        <td style="text-align: left;"><div class="editable-field" data-field="a_shift_remarks" data-type="textarea">-</div></td>
+        <!-- B Shift Data -->
+        <td><div class="editable-field" data-field="b_shift_model" data-type="text">-</div></td>
+        <td><div class="editable-field qty-value" data-field="b_shift_plan" data-type="number">-</div></td>
+        <td><div class="editable-field qty-value" data-field="b_shift_actual" data-type="number">-</div></td>
+        <td><div class="editable-field qty-value" data-field="b_shift_plan_change" data-type="number">-</div></td>
+        <td><div class="editable-field" data-field="b_shift_time" data-type="time">-</div></td>
+        <td style="text-align: left;"><div class="editable-field" data-field="b_shift_remarks" data-type="textarea">-</div></td>
+        <!-- C Shift Data -->
+        <td><div class="editable-field" data-field="c_shift_model" data-type="text">-</div></td>
+        <td><div class="editable-field qty-value" data-field="c_shift_plan" data-type="number">-</div></td>
+        <td><div class="editable-field qty-value" data-field="c_shift_actual" data-type="number">-</div></td>
+        <td><div class="editable-field qty-value" data-field="c_shift_plan_change" data-type="number">-</div></td>
+        <td style="text-align: left;"><div class="editable-field" data-field="c_shift_remarks" data-type="textarea">-</div></td>
+        <td style="text-align: center;">
+            <button class="delete-row-btn" onclick="deleteRow(this, 'production_line', null)">×</button>
+        </td>
+    `;
+    
+    tbody.appendChild(newRow);
+    initializeEditableFields();
+}
+
+function addTomorrowPlanRow() {
+    const tableId = 'tomorrowTable';
+    const table = document.getElementById(tableId);
+    const tbody = table.querySelector('tbody');
+    const newRow = document.createElement('tr');
+    const tempId = 'new_' + Date.now();
+    
+    newRow.dataset.type = 'tomorrow_plan';
+    newRow.dataset.id = tempId;
+    
+    newRow.innerHTML = `
+        <td style="text-align: left; font-weight: 600;"><div class="editable-field" data-field="model" data-type="text">New Model</div></td>
+        <td><div class="editable-field qty-value" data-field="a_shift" data-type="number">-</div></td>
+        <td><div class="editable-field qty-value" data-field="b_shift" data-type="number">-</div></td>
+        <td><div class="editable-field qty-value" data-field="c_shift" data-type="number">-</div></td>
+        <td style="text-align: left;"><div class="editable-field" data-field="remarks" data-type="textarea">-</div></td>
+        <td style="text-align: center;">
+            <button class="delete-row-btn" onclick="deleteRow(this, 'tomorrow_plan', null)">×</button>
+        </td>
+    `;
+    
+    tbody.appendChild(newRow);
+    initializeEditableFields();
+}
+
+function addNextDayPlanRow() {
+    const tableId = 'nextDayTable';
+    const table = document.getElementById(tableId);
+    const tbody = table.querySelector('tbody');
+    const newRow = document.createElement('tr');
+    const tempId = 'new_' + Date.now();
+    
+    newRow.dataset.type = 'next_day_plan';
+    newRow.dataset.id = tempId;
+    
+    newRow.innerHTML = `
+        <td style="text-align: left; font-weight: 600;"><div class="editable-field" data-field="model" data-type="text">New Model</div></td>
+        <td><div class="editable-field qty-value" data-field="a_shift" data-type="number">-</div></td>
+        <td><div class="editable-field qty-value" data-field="b_shift" data-type="number">-</div></td>
+        <td><div class="editable-field qty-value" data-field="c_shift" data-type="number">-</div></td>
+        <td style="text-align: left;"><div class="editable-field" data-field="remarks" data-type="textarea">-</div></td>
+        <td style="text-align: center;">
+            <button class="delete-row-btn" onclick="deleteRow(this, 'next_day_plan', null)">×</button>
+        </td>
+    `;
+    
+    tbody.appendChild(newRow);
+    initializeEditableFields();
+}
+
+function addCriticalPartRow() {
+    const tableId = 'criticalPartsTable';
+    const table = document.getElementById(tableId);
+    const tbody = table.querySelector('tbody');
+    const newRow = document.createElement('tr');
+    const tempId = 'new_' + Date.now();
+    
+    newRow.dataset.type = 'critical_part';
+    newRow.dataset.id = tempId;
+    
+    newRow.innerHTML = `
+        <td style="text-align: left; font-weight: 600;"><div class="editable-field" data-field="part_name" data-type="text">New Part</div></td>
+        <td style="text-align: left;"><div class="editable-field" data-field="supplier" data-type="text">-</div></td>
+        <td><div class="editable-field qty-value" data-field="plan_qty" data-type="number">-</div></td>
+        <td><div class="editable-field" data-field="receiving_time" data-type="datetime">-</div></td>
+        <td style="text-align: left;"><div class="editable-field" data-field="remarks" data-type="textarea">-</div></td>
+        <td style="text-align: center;">
+            <button class="delete-row-btn" onclick="deleteRow(this, 'critical_part', null)">×</button>
+        </td>
+    `;
+    
+    tbody.appendChild(newRow);
+    initializeEditableFields();
+}
+
+function addAFMPlanRow() {
+    const tableId = 'afmPlansTable';
+    const table = document.getElementById(tableId);
+    const tbody = table.querySelector('tbody');
+    const newRow = document.createElement('tr');
+    const tempId = 'new_' + Date.now();
+    
+    newRow.dataset.type = 'afm_plan';
+    newRow.dataset.id = tempId;
+    
+    newRow.innerHTML = `
+        <td>
+            <div class="editable-field" data-field="plan_type" data-type="select" data-options="FCIN,IU" data-value="FCIN">
+                <span class="status-badge badge-type">FCIN</span>
+            </div>
+        </td>
+        <td style="text-align: left; font-weight: 600;"><div class="editable-field" data-field="part_name" data-type="text">New Part</div></td>
+        <td><div class="editable-field" data-field="part_number" data-type="text">-</div></td>
+        <td><div class="editable-field qty-value" data-field="plan_qty" data-type="number">-</div></td>
+        <td style="text-align: left;"><div class="editable-field" data-field="remarks" data-type="textarea">-</div></td>
+        <td style="text-align: center;">
+            <button class="delete-row-btn" onclick="deleteRow(this, 'afm_plan', null)">×</button>
+        </td>
+    `;
+    
+    tbody.appendChild(newRow);
+    initializeEditableFields();
+}
+
+function addSPDPlanRow() {
+    const tableId = 'spdPlansTable';
+    const table = document.getElementById(tableId);
+    const tbody = table.querySelector('tbody');
+    const newRow = document.createElement('tr');
+    const tempId = 'new_' + Date.now();
+    
+    newRow.dataset.type = 'spd_plan';
+    newRow.dataset.id = tempId;
+    
+    newRow.innerHTML = `
+        <td>
+            <div class="editable-field" data-field="customer" data-type="select" data-options="MSIL,HMSI,IYM,HMCL" data-value="MSIL">
+                <span class="status-badge badge-customer">MSIL</span>
+            </div>
+        </td>
+        <td style="text-align: left; font-weight: 600;"><div class="editable-field" data-field="part_name" data-type="text">New Part</div></td>
+        <td><div class="editable-field" data-field="part_number" data-type="text">-</div></td>
+        <td><div class="editable-field qty-value" data-field="plan_qty" data-type="number">-</div></td>
+        <td style="text-align: left;"><div class="editable-field" data-field="remarks" data-type="textarea">-</div></td>
+        <td style="text-align: center;">
+            <button class="delete-row-btn" onclick="deleteRow(this, 'spd_plan', null)">×</button>
+        </td>
+    `;
+    
+    tbody.appendChild(newRow);
+    initializeEditableFields();
+}
+
+function addOtherInfoRow() {
+    const tableId = 'otherInfoTable';
+    const table = document.getElementById(tableId);
+    const tbody = table.querySelector('tbody');
+    const newRow = document.createElement('tr');
+    const tempId = 'new_' + Date.now();
+    
+    newRow.dataset.type = 'other_info';
+    newRow.dataset.id = tempId;
+    
+    const today = new Date().toISOString().split('T')[0];
+    
+    newRow.innerHTML = `
+        <td style="text-align: left; font-weight: 600;"><div class="editable-field" data-field="part_name" data-type="text">New Part</div></td>
+        <td><div class="editable-field qty-value" data-field="qty" data-type="number">-</div></td>
+        <td><div class="editable-field" data-field="target_date" data-type="date" data-value="${today}">-</div></td>
+        <td style="text-align: left;"><div class="editable-field" data-field="remarks" data-type="textarea">-</div></td>
+        <td style="text-align: center;">
+            <button class="delete-row-btn" onclick="deleteRow(this, 'other_info', null)">×</button>
+        </td>
+    `;
+    
+    tbody.appendChild(newRow);
+    initializeEditableFields();
+}
+
+function deleteRow(button, rowType, rowId) {
+    if (confirm('Are you sure you want to delete this row?')) {
+        const row = button.closest('tr');
+        
+        if (rowId) {
+            // Mark for deletion in backend
+            if (!pendingChanges['delete']) {
+                pendingChanges['delete'] = {};
+            }
+            if (!pendingChanges['delete'][rowType]) {
+                pendingChanges['delete'][rowType] = [];
+            }
+            pendingChanges['delete'][rowType].push(rowId);
+        }
+        
+        row.remove();
+        showSaveIndicator();
+    }
+}
+
+// Utility function to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
 </script>
+
 {% endblock %}

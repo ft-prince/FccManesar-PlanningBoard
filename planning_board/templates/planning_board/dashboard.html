@@ -1,109 +1,584 @@
-{% extends 'planning_board/base.html' %}
 
-{% block title %}Dashboard - Planning Board{% endblock %}
+{% block extra_css %}
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background-color: #f5f5f5;
+        color: #333;
+        line-height: 1.6;
+    }
+
+    .dashboard-header {
+        background: #2563eb;
+        color: white;
+        padding: 30px 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+
+    .dashboard-header h1 {
+        font-size: 2.2rem;
+        font-weight: 600;
+        margin-bottom: 8px;
+    }
+
+    .dashboard-header p {
+        font-size: 1rem;
+        opacity: 0.9;
+    }
+
+    .filter-section {
+        background: white;
+        padding: 25px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border: 1px solid #e5e5e5;
+    }
+
+    .filter-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .filter-controls {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        align-items: end;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .form-group label {
+        font-weight: 500;
+        margin-bottom: 8px;
+        color: #374151;
+    }
+
+    .form-control {
+        padding: 12px;
+        border: 2px solid #e5e5e5;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: border-color 0.2s;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: #2563eb;
+    }
+
+    .btn {
+        padding: 12px 20px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        justify-content: center;
+    }
+
+    .btn-primary {
+        background: #2563eb;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background: #1d4ed8;
+        color: white;
+        text-decoration: none;
+    }
+
+    .btn-secondary {
+        background: #6b7280;
+        color: white;
+    }
+
+    .btn-secondary:hover {
+        background: #4b5563;
+        color: white;
+        text-decoration: none;
+    }
+
+    .btn-outline-primary {
+        background: transparent;
+        color: #2563eb;
+        border: 2px solid #2563eb;
+    }
+
+    .btn-outline-primary:hover {
+        background: #2563eb;
+        color: white;
+        text-decoration: none;
+    }
+
+    .btn-outline-secondary {
+        background: transparent;
+        color: #6b7280;
+        border: 2px solid #6b7280;
+    }
+
+    .btn-outline-secondary:hover {
+        background: #6b7280;
+        color: white;
+        text-decoration: none;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+
+    .stat-card {
+        background: white;
+        padding: 25px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border: 1px solid #e5e5e5;
+        text-align: center;
+    }
+
+    .stat-card.primary {
+        border-left: 4px solid #2563eb;
+    }
+
+    .stat-card.success {
+        border-left: 4px solid #059669;
+    }
+
+    .stat-card.info {
+        border-left: 4px solid #0891b2;
+    }
+
+    .stat-card.warning {
+        border-left: 4px solid #d97706;
+    }
+
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 8px;
+        display: block;
+    }
+
+    .stat-label {
+        font-size: 1rem;
+        color: #6b7280;
+        font-weight: 500;
+    }
+
+    .stat-icon {
+        font-size: 2rem;
+        margin-bottom: 15px;
+        opacity: 0.7;
+    }
+
+    .stat-card.primary .stat-icon {
+        color: #2563eb;
+    }
+
+    .stat-card.success .stat-icon {
+        color: #059669;
+    }
+
+    .stat-card.info .stat-icon {
+        color: #0891b2;
+    }
+
+    .stat-card.warning .stat-icon {
+        color: #d97706;
+    }
+
+    .content-section {
+        background: white;
+        border-radius: 8px;
+        padding: 25px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border: 1px solid #e5e5e5;
+    }
+
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 25px;
+        padding-bottom: 15px;
+        border-bottom: 2px solid #f3f4f6;
+    }
+
+    .section-title {
+        font-size: 1.4rem;
+        font-weight: 600;
+        color: #1f2937;
+    }
+
+    .table-container {
+        overflow-x: auto;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+
+    .table th,
+    .table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #e5e5e5;
+    }
+
+    .table th {
+        background: #f9fafb;
+        font-weight: 600;
+        color: #374151;
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .table tr:hover {
+        background: #f9fafb;
+    }
+
+    .table .btn {
+        padding: 6px 12px;
+        font-size: 12px;
+        margin-right: 5px;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 40px 20px;
+        color: #6b7280;
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        margin-bottom: 20px;
+        opacity: 0.5;
+    }
+
+    .empty-state h3 {
+        font-size: 1.2rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+        color: #374151;
+    }
+
+    .empty-state p {
+        margin-bottom: 20px;
+    }
+
+    .icon {
+        width: 16px;
+        height: 16px;
+        display: inline-block;
+    }
+
+    .icon-filter::before {
+        content: "🔍";
+    }
+
+    .icon-clipboard::before {
+        content: "📋";
+    }
+
+    .icon-factory::before {
+        content: "🏭";
+    }
+
+    .icon-clock::before {
+        content: "🕐";
+    }
+
+    .icon-plus::before {
+        content: "➕";
+    }
+
+    .icon-eye::before {
+        content: "👁";
+    }
+
+    .icon-edit::before {
+        content: "✏️";
+    }
+
+    .icon-upload::before {
+        content: "📤";
+    }
+
+    .icon-calendar::before {
+        content: "📅";
+    }
+
+    .quick-actions {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    @media (max-width: 768px) {
+        .filter-controls {
+            grid-template-columns: 1fr;
+        }
+        
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        
+        .section-header {
+            flex-direction: column;
+            gap: 15px;
+            text-align: center;
+        }
+        
+        .dashboard-header h1 {
+            font-size: 1.8rem;
+        }
+        
+        .quick-actions {
+            flex-direction: column;
+        }
+        
+        .quick-actions .btn {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-12">
-        <h1 class="mb-4">Production Planning Dashboard </h1>
+
+<!-- Header -->
+<div class="dashboard-header">
+    <h1>Production Planning Dashboard</h1>
+    <p>Manage and monitor your production planning boards efficiently</p>
+</div>
+
+<!-- Filter Section -->
+<div class="filter-section">
+    <div class="filter-title">
+        <span class="icon icon-filter"></span>
+        Filter Planning Boards
+    </div>
+    <form id="filterForm" method="GET" action="{% url 'planning_board:dashboard' %}">
+        <div class="filter-controls">
+            <div class="form-group">
+                <label for="dateFrom">From Date</label>
+                <input type="date" id="dateFrom" name="date_from" class="form-control" 
+                       value="{{ filter_date_from }}" onchange="applyFilters()">
+            </div>
+            <div class="form-group">
+                <label for="dateTo">To Date</label>
+                <input type="date" id="dateTo" name="date_to" class="form-control" 
+                       value="{{ filter_date_to }}" onchange="applyFilters()">
+            </div>
+            <div class="form-group">
+                <label for="statusFilter">Status</label>
+                <select id="statusFilter" name="status" class="form-control" onchange="applyFilters()">
+                    <option value="">All Status</option>
+                    <option value="recent" {% if filter_status == 'recent' %}selected{% endif %}>Recent</option>
+                    <option value="today" {% if filter_status == 'today' %}selected{% endif %}>Today</option>
+                    <option value="this_week" {% if filter_status == 'this_week' %}selected{% endif %}>This Week</option>
+                    <option value="this_month" {% if filter_status == 'this_month' %}selected{% endif %}>This Month</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>&nbsp;</label>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button type="button" class="btn btn-secondary" onclick="clearFilters()">Clear</button>
+                    <button type="button" class="btn btn-primary" onclick="setTodayFilter()">Today</button>
+                    <button type="button" class="btn btn-outline-primary" onclick="filterThisWeek()">This Week</button>
+                    <button type="submit" class="btn btn-primary">Apply Filter</button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Statistics -->
+<div class="stats-grid">
+    <div class="stat-card primary">
+        <div class="stat-icon icon-clipboard"></div>
+        <span class="stat-number">{{ total_boards }}</span>
+        <div class="stat-label">Total Planning Boards</div>
+    </div>
+    <div class="stat-card success">
+        <div class="stat-icon icon-factory"></div>
+        <span class="stat-number">{{ total_production_lines }}</span>
+        <div class="stat-label">Production Lines</div>
+    </div>
+    <div class="stat-card info">
+        <div class="stat-icon icon-clock"></div>
+        <span class="stat-number">{{ filtered_boards.count }}</span>
+        <div class="stat-label">Filtered Results</div>
+    </div>
+    <div class="stat-card warning">
+        <div class="stat-icon icon-calendar"></div>
+        <span class="stat-number">{{ today_boards_count|default:0 }}</span>
+        <div class="stat-label">Today's Boards</div>
     </div>
 </div>
 
-<div class="row mb-4">
-    <div class="col-md-4">
-        <div class="card bg-primary text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4>{{ total_boards }}</h4>
-                        <p class="mb-0">Total Planning Boards</p>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-clipboard-list fa-2x"></i>
-                    </div>
-                </div>
-            </div>
+<!-- Planning Boards Table -->
+<div class="content-section">
+    <div class="section-header">
+        <h2 class="section-title">Planning Boards</h2>
+        <div class="quick-actions">
+            <a href="{% url 'planning_board:excel_upload' %}" class="btn btn-outline-secondary">
+                <span class="icon icon-upload"></span>
+                Upload Excel
+            </a>
+            <a href="{% url 'planning_board:create' %}" class="btn btn-primary">
+                <span class="icon icon-plus"></span>
+                Create New
+            </a>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card bg-success text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4>{{ total_production_lines }}</h4>
-                        <p class="mb-0">Production Lines</p>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-industry fa-2x"></i>
-                    </div>
+
+    <div id="boardsContainer">
+        {% if filtered_boards %}
+            <!-- Table -->
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Title</th>
+                            <th>Meeting Time</th>
+                            <th>Created</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for board in filtered_boards %}
+                        <tr>
+                            <td>{{ board.today_date }}</td>
+                            <td>{{ board.title|truncatechars:50 }}</td>
+                            <td>{{ board.meeting_time|default:"-" }}</td>
+                            <td>{{ board.created_at|date:"M d, Y H:i" }}</td>
+                            <td>
+                                <a href="{% url 'planning_board:detail' board.pk %}" class="btn btn-outline-primary">
+                                    <span class="icon icon-eye"></span>
+                                    View
+                                </a>
+                                <a href="{% url 'planning_board:edit' board.pk %}" class="btn btn-outline-secondary">
+                                    <span class="icon icon-edit"></span>
+                                    Edit
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <!-- Empty state -->
+            <div class="empty-state">
+                <div class="empty-state-icon">📋</div>
+                <h3>No Planning Boards Found</h3>
+                <p>
+                    {% if filter_date_from or filter_date_to or filter_status %}
+                        No planning boards match your current filter criteria.
+                    {% else %}
+                        No planning boards found.
+                    {% endif %}
+                </p>
+                <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                    <a href="{% url 'planning_board:create' %}" class="btn btn-primary">Create your first one</a>
+                    <a href="{% url 'planning_board:excel_upload' %}" class="btn btn-outline-secondary">Upload an Excel file</a>
                 </div>
             </div>
-        </div>
-    </div>
-    <div class="col-md-4">
-        <div class="card bg-info text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h4>{{ recent_boards.count }}</h4>
-                        <p class="mb-0">Recent Boards</p>
-                    </div>
-                    <div class="align-self-center">
-                        <i class="fas fa-clock fa-2x"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
+        {% endif %}
     </div>
 </div>
 
-<div class="row">
-    <div class="col-md-12">
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Recent Planning Boards</h5>
-                <a href="{% url 'planning_board:create' %}" class="btn btn-primary btn-sm">
-                    <i class="fas fa-plus"></i> Create New
-                </a>
-            </div>
-            <div class="card-body">
-                {% if recent_boards %}
-                    <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Date</th>
-                                    <th>Title</th>
-                                    <th>Meeting Time</th>
-                                    <th>Created</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for board in recent_boards %}
-                                    <tr>
-                                        <td>{{ board.today_date }}</td>
-                                        <td>{{ board.title|truncatechars:50 }}</td>
-                                        <td>{{ board.meeting_time|default:"-" }}</td>
-                                        <td>{{ board.created_at|date:"M d, Y H:i" }}</td>
-                                        <td>
-                                            <a href="{% url 'planning_board:detail' board.pk %}" class="btn btn-sm btn-outline-primary">
-                                                <i class="fas fa-eye"></i> View
-                                            </a>
-                                            <a href="{% url 'planning_board:edit' board.pk %}" class="btn btn-sm btn-outline-secondary">
-                                                <i class="fas fa-edit"></i> Edit
-                                            </a>
-                                        </td>
-                                    </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                {% else %}
-                    <p class="text-muted">No planning boards found. <a href="{% url 'planning_board:create' %}">Create your first one</a> or <a href="{% url 'planning_board:excel_upload' %}">upload an Excel file</a>.</p>
-                {% endif %}
-            </div>
-        </div>
-    </div>
-</div>
+<script>
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+        // Check if we need to set default filters
+        const urlParams = new URLSearchParams(window.location.search);
+        const hasFilters = urlParams.has('date_from') || urlParams.has('date_to') || urlParams.has('status');
+        
+        // If no filters are present in URL, set today's filter
+        if (!hasFilters) {
+            setTodayFilter();
+        }
+    });
+
+    // Apply filters function - submits the form
+    function applyFilters() {
+        document.getElementById('filterForm').submit();
+    }
+
+    // Set today's date as default filter
+    function setTodayFilter() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('dateFrom').value = today;
+        document.getElementById('dateTo').value = today;
+        document.getElementById('statusFilter').value = 'today';
+        
+        // Submit the form automatically
+        applyFilters();
+    }
+
+    // Clear all filters
+    function clearFilters() {
+        // Redirect to dashboard without any parameters
+        window.location.href = "{% url 'planning_board:dashboard' %}";
+    }
+
+    // Quick filter functions
+    function filterToday() {
+        setTodayFilter();
+    }
+
+    function filterThisWeek() {
+        const today = new Date();
+        const weekStart = new Date(today);
+        weekStart.setDate(today.getDate() - today.getDay());
+        
+        document.getElementById('dateFrom').value = weekStart.toISOString().split('T')[0];
+        document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+        document.getElementById('statusFilter').value = 'this_week';
+        
+        applyFilters();
+    }
+
+    function filterThisMonth() {
+        const today = new Date();
+        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+        
+        document.getElementById('dateFrom').value = monthStart.toISOString().split('T')[0];
+        document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+        document.getElementById('statusFilter').value = 'this_month';
+        
+        applyFilters();
+    }
+</script>
+
 {% endblock %}

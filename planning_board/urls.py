@@ -18,27 +18,9 @@ urlpatterns = [
     # Excel operations
     path('upload/', views.excel_upload, name='excel_upload'),
     path('boards/<int:pk>/export/', views.export_to_excel, name='export_excel'),
-    
+    path('<int:pk>/inline-update/', views.inline_update_board, name='inline_update'),
+
     # AJAX endpoints
     path('ajax/add-production-line/', views.ajax_add_production_line, name='ajax_add_production_line'),
 ]
 
-# For main project urls.py, add this:
-"""
-# In your main project's urls.py file:
-
-from django.contrib import admin
-from django.urls import path, include
-from django.conf import settings
-from django.conf.urls.static import static
-
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('planning/', include('planning_board.urls')),
-    # Add other app URLs here
-]
-
-# Serve media files during development
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-"""
