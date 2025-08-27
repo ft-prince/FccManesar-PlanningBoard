@@ -22,5 +22,25 @@ urlpatterns = [
 
     # AJAX endpoints
     path('ajax/add-production-line/', views.ajax_add_production_line, name='ajax_add_production_line'),
+    
+    
+    
+    
+    
+    
+    #  new 
+    
+    path('live-view/', views.live_view_page, name='live_view'),
+    path('api/boards/', views.get_user_planning_boards, name='api_boards'),
+    path('api/board/<int:board_id>/sections/', views.get_board_sections_summary, name='api_board_sections'),
+    path('api/board/<int:board_id>/section/<str:section>/', views.get_section_data, name='api_section_data'),
+    path('api/board/<int:board_id>/section/<str:section>/stream/', views.live_stream_section, name='api_live_stream'),
+    path('api/board/<int:board_id>/trigger-update/', views.trigger_board_update, name='api_trigger_update'),
+
+
+    # Fullscreen Display - NEW ADDITION
+    path('display/<int:board_id>/<str:section>/', views.fullscreen_display, name='fullscreen_display'),
+    path('api/display/<int:board_id>/<str:section>/stream/', views.fullscreen_data_stream, name='fullscreen_stream'),
+
 ]
 

@@ -589,7 +589,7 @@
 <div class="dashboard-container">
     <!-- Header -->
     <div class="dashboard-header">
-        <h1>Production Planning Dashboard</h1>
+        <h1>FCC Manesar Production Planning Dashboard</h1>
         <p>Manage and monitor your production planning boards efficiently</p>
     </div>
 
@@ -667,10 +667,7 @@
                     <span class="icon icon-upload"></span>
                     Upload Excel
                 </a>
-                <a href="{% url 'planning_board:create' %}" class="btn btn-primary">
-                    <span class="icon icon-plus"></span>
-                    Create New
-                </a>
+        
             </div>
         </div>
 
@@ -700,10 +697,7 @@
                                         <span class="icon icon-eye"></span>
                                         View
                                     </a>
-                                    <a href="{% url 'planning_board:edit' board.pk %}" class="btn btn-outline-secondary">
-                                        <span class="icon icon-edit"></span>
-                                        Edit
-                                    </a>
+                          
                                 </td>
                             </tr>
                             {% endfor %}

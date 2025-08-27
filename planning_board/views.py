@@ -1440,3 +1440,794 @@ def process_other_info_data(data):
         processed['target_date'] = timezone.now().date()
     
     return processed
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#  new one 
+
+
+# Add these views to your existing views.py file
+
+import json
+import time
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse, StreamingHttpResponse, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.cache import never_cache
+from django.utils import timezone
+from datetime import datetime
+from django.db.models import Count, Q
+from .models import (
+    PlanningBoard, ProductionLine, TomorrowPlan, NextDayPlan,
+    CriticalPartStatus, AFMPlan, SPDPlan, OtherInformation
+)
+
+@login_required
+def live_view_page(request):
+    """Render the live view page"""
+    # Get user's planning boards for the dropdown
+    boards = PlanningBoard.objects.filter(created_by=request.user).order_by('-created_at')[:10]
+    
+    context = {
+        'boards': boards,
+        'current_time': timezone.now(),
+    }
+    
+    return render(request, 'planning_board/live_view.html', context)
+
+@login_required
+@never_cache
+def get_board_sections_summary(request, board_id):
+    """Get summary data for all sections of a planning board"""
+    board = get_object_or_404(PlanningBoard, pk=board_id, created_by=request.user)
+    
+    # Get counts and last updated times for each section
+    sections_data = {}
+    
+    # Today Assembly Plan (Production Lines)
+    production_lines = board.production_lines.all()
+    sections_data['today_assembly'] = {
+        'count': production_lines.count(),
+        'last_updated': board.updated_at,
+        'status': 'active' if production_lines.exists() else 'empty'
+    }
+    
+    # Tomorrow Assembly Plan
+    tomorrow_plans = board.tomorrow_plans.all()
+    sections_data['tomorrow_assembly'] = {
+        'count': tomorrow_plans.count(),
+        'last_updated': board.updated_at,
+        'status': 'active' if tomorrow_plans.exists() else 'empty'
+    }
+    
+    # Next Day Assembly Plan
+    next_day_plans = board.next_day_plans.all()
+    sections_data['next_day_assembly'] = {
+        'count': next_day_plans.count(),
+        'last_updated': board.updated_at,
+        'status': 'active' if next_day_plans.exists() else 'empty'
+    }
+    
+    # Critical Parts
+    critical_parts = board.critical_parts.all()
+    sections_data['critical_parts'] = {
+        'count': critical_parts.count(),
+        'last_updated': board.updated_at,
+        'status': 'active' if critical_parts.exists() else 'empty'
+    }
+    
+    # AFM Plans
+    afm_plans = board.afm_plans.all()
+    sections_data['afm_plans'] = {
+        'count': afm_plans.count(),
+        'last_updated': board.updated_at,
+        'status': 'active' if afm_plans.exists() else 'empty'
+    }
+    
+    # SPD Plans
+    spd_plans = board.spd_plans.all()
+    sections_data['spd_plans'] = {
+        'count': spd_plans.count(),
+        'last_updated': board.updated_at,
+        'status': 'active' if spd_plans.exists() else 'empty'
+    }
+    
+    # Other Information
+    other_info = board.other_info.all()
+    sections_data['other_info'] = {
+        'count': other_info.count(),
+        'last_updated': board.updated_at,
+        'status': 'active' if other_info.exists() else 'empty'
+    }
+    
+    return JsonResponse({
+        'board_id': board.pk,
+        'board_title': board.title,
+        'board_date': board.today_date.strftime('%Y-%m-%d'),
+        'sections': sections_data,
+        'timestamp': timezone.now().isoformat()
+    })
+
+@login_required
+@never_cache
+def get_section_data(request, board_id, section):
+    """Get detailed data for a specific section"""
+    board = get_object_or_404(PlanningBoard, pk=board_id, created_by=request.user)
+    
+    data = {
+        'section': section,
+        'board_id': board.pk,
+        'timestamp': timezone.now().isoformat(),
+        'data': []
+    }
+    
+    if section == 'today_assembly':
+        production_lines = board.production_lines.all().order_by('line_number')
+        data['title'] = 'Today Assembly Plan'
+        data['headers'] = [
+            'Line No.', 'A Shift Model', 'A Plan', 'A Actual', 'A Change', 'A Time',
+            'B Shift Model', 'B Plan', 'B Actual', 'B Change', 'B Time',
+            'C Shift Model', 'C Plan', 'C Actual', 'C Change', 'Remarks'
+        ]
+        
+        for line in production_lines:
+            data['data'].append([
+                line.line_number or '',
+                line.a_shift_model or '',
+                line.a_shift_plan or 0,
+                line.a_shift_actual or 0,
+                line.a_shift_plan_change or 0,
+                str(line.a_shift_time) if line.a_shift_time else '',
+                line.b_shift_model or '',
+                line.b_shift_plan or 0,
+                line.b_shift_actual or 0,
+                line.b_shift_plan_change or 0,
+                str(line.b_shift_time) if line.b_shift_time else '',
+                line.c_shift_model or '',
+                line.c_shift_plan or 0,
+                line.c_shift_actual or 0,
+                line.c_shift_plan_change or 0,
+                (line.a_shift_remarks or line.b_shift_remarks or line.c_shift_remarks or '')[:100]
+            ])
+    
+    elif section == 'tomorrow_assembly':
+        tomorrow_plans = board.tomorrow_plans.all().order_by('model')
+        data['title'] = 'Tomorrow Assembly Plan'
+        data['headers'] = ['Model', 'A Shift', 'B Shift', 'C Shift', 'Total', 'Remarks']
+        
+        for plan in tomorrow_plans:
+            total = (plan.a_shift or 0) + (plan.b_shift or 0) + (plan.c_shift or 0)
+            data['data'].append([
+                plan.model or '',
+                plan.a_shift or 0,
+                plan.b_shift or 0,
+                plan.c_shift or 0,
+                total,
+                (plan.remarks or '')[:100]
+            ])
+    
+    elif section == 'next_day_assembly':
+        next_day_plans = board.next_day_plans.all().order_by('model')
+        data['title'] = 'Next Day Assembly Plan'
+        data['headers'] = ['Model', 'A Shift', 'B Shift', 'C Shift', 'Total', 'Remarks']
+        
+        for plan in next_day_plans:
+            total = (plan.a_shift or 0) + (plan.b_shift or 0) + (plan.c_shift or 0)
+            data['data'].append([
+                plan.model or '',
+                plan.a_shift or 0,
+                plan.b_shift or 0,
+                plan.c_shift or 0,
+                total,
+                (plan.remarks or '')[:100]
+            ])
+    
+    elif section == 'critical_parts':
+        critical_parts = board.critical_parts.all().order_by('part_name')
+        data['title'] = 'Critical Part Status'
+        data['headers'] = ['Part Name', 'Supplier', 'Plan Qty', 'Receiving Time', 'Status', 'Remarks']
+        
+        for part in critical_parts:
+            # Determine status based on receiving time
+            status = 'Pending'
+            if part.receiving_time:
+                if part.receiving_time <= timezone.now():
+                    status = 'Received'
+                else:
+                    status = 'Scheduled'
+            
+            data['data'].append([
+                part.part_name or '',
+                part.supplier or '',
+                part.plan_qty or 0,
+                part.receiving_time.strftime('%Y-%m-%d %H:%M') if part.receiving_time else '',
+                status,
+                (part.remarks or '')[:100]
+            ])
+    
+    elif section == 'afm_plans':
+        afm_plans = board.afm_plans.all().order_by('plan_type', 'part_name')
+        data['title'] = 'AFM Plans'
+        data['headers'] = ['Type', 'Part Name', 'Part Number', 'Plan Qty', 'Remarks']
+        
+        for plan in afm_plans:
+            data['data'].append([
+                plan.plan_type or '',
+                plan.part_name or '',
+                plan.part_number or '',
+                plan.plan_qty or 0,
+                (plan.remarks or '')[:100]
+            ])
+    
+    elif section == 'spd_plans':
+        spd_plans = board.spd_plans.all().order_by('customer', 'part_name')
+        data['title'] = 'SPD Plans (Customer-wise)'
+        data['headers'] = ['Customer', 'Part Name', 'Part Number', 'Plan Qty', 'Remarks']
+        
+        for plan in spd_plans:
+            data['data'].append([
+                plan.customer or '',
+                plan.part_name or '',
+                plan.part_number or '',
+                plan.plan_qty or 0,
+                (plan.remarks or '')[:100]
+            ])
+    
+    elif section == 'other_info':
+        other_info = board.other_info.all().order_by('target_date', 'part_name')
+        data['title'] = 'Other Information'
+        data['headers'] = ['Part Name', 'Quantity', 'Target Date', 'Remarks']
+        
+        for info in other_info:
+            data['data'].append([
+                info.part_name or '',
+                info.qty or 0,
+                info.target_date.strftime('%Y-%m-%d') if info.target_date else '',
+                (info.remarks or '')[:100]
+            ])
+    
+    return JsonResponse(data)
+
+@login_required
+@never_cache
+def live_stream_section(request, board_id, section):
+    """Server-Sent Events stream for real-time updates"""
+    
+    def event_stream():
+        """Generator function for SSE stream"""
+        board = get_object_or_404(PlanningBoard, pk=board_id, created_by=request.user)
+        last_update = timezone.now()
+        
+        while True:
+            try:
+                # Check if board has been updated
+                current_board = PlanningBoard.objects.get(pk=board_id, created_by=request.user)
+                
+                if current_board.updated_at > last_update:
+                    # Get fresh data
+                    response = get_section_data(request, board_id, section)
+                    data = json.loads(response.content.decode('utf-8'))
+                    
+                    # Send SSE event
+                    yield f"data: {json.dumps(data)}\n\n"
+                    
+                    last_update = current_board.updated_at
+                
+                # Send heartbeat every 30 seconds
+                yield f"event: heartbeat\ndata: {json.dumps({'timestamp': timezone.now().isoformat()})}\n\n"
+                
+                time.sleep(5)  # Check for updates every 5 seconds
+                
+            except PlanningBoard.DoesNotExist:
+                yield f"event: error\ndata: {json.dumps({'error': 'Board not found'})}\n\n"
+                break
+            except Exception as e:
+                yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+                time.sleep(10)  # Wait longer on error
+    
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['Access-Control-Allow-Origin'] = '*'
+    response['Access-Control-Allow-Headers'] = 'Cache-Control'
+    
+    return response
+
+@login_required
+def get_user_planning_boards(request):
+    """Get list of planning boards for the current user"""
+    boards = PlanningBoard.objects.filter(created_by=request.user).order_by('-created_at')[:20]
+    
+    boards_data = []
+    for board in boards:
+        boards_data.append({
+            'id': board.pk,
+            'title': board.title,
+            'date': board.today_date.strftime('%Y-%m-%d'),
+            'created_at': board.created_at.strftime('%Y-%m-%d %H:%M'),
+            'meeting_time': str(board.meeting_time) if board.meeting_time else None
+        })
+    
+    return JsonResponse({
+        'boards': boards_data,
+        'total_count': boards.count()
+    })
+
+@login_required
+@csrf_exempt
+def trigger_board_update(request, board_id):
+    """Trigger a manual update of the board's timestamp (for testing real-time updates)"""
+    if request.method == 'POST':
+        board = get_object_or_404(PlanningBoard, pk=board_id, created_by=request.user)
+        board.updated_at = timezone.now()
+        board.save(update_fields=['updated_at'])
+        
+        return JsonResponse({
+            'success': True,
+            'message': 'Board updated successfully',
+            'updated_at': board.updated_at.isoformat()
+        })
+    
+    return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
+#  new for rendering the new page
+
+
+ 
+
+
+# Add these views to your existing views.py file
+
+@login_required
+def fullscreen_display(request, board_id, section):
+    """Fullscreen industry-style display for selected section"""
+    board = get_object_or_404(PlanningBoard, pk=board_id, created_by=request.user)
+    
+    # Validate section
+    valid_sections = [
+        'today_assembly', 'tomorrow_assembly', 'next_day_assembly',
+        'critical_parts', 'afm_plans', 'spd_plans', 'other_info'
+    ]
+    
+    if section not in valid_sections:
+        messages.error(request, 'Invalid section selected')
+        return redirect('planning_board:live_view')
+    
+    # Get section display configuration
+    section_config = get_section_display_config(section)
+    
+    context = {
+        'board': board,
+        'section': section,
+        'section_config': section_config,
+        'current_time': timezone.now(),
+        'refresh_url': f'/planning-board/api/board/{board_id}/section/{section}/',
+        'stream_url': f'/planning-board/api/board/{board_id}/section/{section}/stream/',
+    }
+    
+    return render(request, 'planning_board/fullscreen_display.html', context)
+
+def get_section_display_config(section):
+    """Get display configuration for each section"""
+    configs = {
+        'today_assembly': {
+            'title': 'Today Assembly Plan',
+            'subtitle': 'Real-time Production Status',
+            'icon': '🏭',
+            'color_scheme': 'blue',
+            'layout': 'production_grid',
+            'refresh_interval': 5000,
+            'show_progress': True,
+            'show_alerts': True,
+        },
+        'tomorrow_assembly': {
+            'title': 'Tomorrow Assembly Plan',
+            'subtitle': 'Next Day Production Schedule',
+            'icon': '📅',
+            'color_scheme': 'green',
+            'layout': 'planning_grid',
+            'refresh_interval': 10000,
+            'show_progress': False,
+            'show_alerts': False,
+        },
+        'next_day_assembly': {
+            'title': 'Next Day Assembly Plan',
+            'subtitle': 'Future Production Schedule',
+            'icon': '⏭️',
+            'color_scheme': 'purple',
+            'layout': 'planning_grid',
+            'refresh_interval': 15000,
+            'show_progress': False,
+            'show_alerts': False,
+        },
+        'critical_parts': {
+            'title': 'Critical Parts Status',
+            'subtitle': 'Supply Chain Monitoring',
+            'icon': '⚠️',
+            'color_scheme': 'red',
+            'layout': 'status_grid',
+            'refresh_interval': 3000,
+            'show_progress': True,
+            'show_alerts': True,
+        },
+        'afm_plans': {
+            'title': 'AFM Production Plans',
+            'subtitle': 'FCIN & I/U Operations',
+            'icon': '🔧',
+            'color_scheme': 'orange',
+            'layout': 'operation_grid',
+            'refresh_interval': 8000,
+            'show_progress': True,
+            'show_alerts': False,
+        },
+        'spd_plans': {
+            'title': 'SPD Customer Plans',
+            'subtitle': 'Customer-wise Production',
+            'icon': '🏢',
+            'color_scheme': 'teal',
+            'layout': 'customer_grid',
+            'refresh_interval': 10000,
+            'show_progress': True,
+            'show_alerts': False,
+        },
+        'other_info': {
+            'title': 'Additional Information',
+            'subtitle': 'Support & Maintenance',
+            'icon': '📝',
+            'color_scheme': 'gray',
+            'layout': 'info_grid',
+            'refresh_interval': 12000,
+            'show_progress': False,
+            'show_alerts': False,
+        }
+    }
+    
+    return configs.get(section, configs['today_assembly'])
+
+@never_cache
+def fullscreen_data_stream(request, board_id, section):
+    """Enhanced streaming endpoint for fullscreen display with additional metadata"""
+    
+    def event_stream():
+        board = get_object_or_404(PlanningBoard, pk=board_id, created_by=request.user)
+        last_update = timezone.now()
+        
+        while True:
+            try:
+                # Check if board has been updated
+                current_board = PlanningBoard.objects.get(pk=board_id, created_by=request.user)
+                
+                if current_board.updated_at > last_update:
+                    # Get enhanced data with statistics
+                    data = get_enhanced_section_data(board_id, section, request.user)
+                    
+                    # Send SSE event
+                    yield f"data: {json.dumps(data)}\n\n"
+                    
+                    last_update = current_board.updated_at
+                
+                # Send heartbeat with system status
+                system_status = {
+                    'timestamp': timezone.now().isoformat(),
+                    'board_id': board_id,
+                    'section': section,
+                    'connection_count': 1,  # Could track multiple connections
+                    'server_time': timezone.now().strftime('%H:%M:%S'),
+                    'server_date': timezone.now().strftime('%Y-%m-%d'),
+                }
+                
+                yield f"event: heartbeat\ndata: {json.dumps(system_status)}\n\n"
+                
+                time.sleep(3)  # More frequent updates for fullscreen display
+                
+            except PlanningBoard.DoesNotExist:
+                yield f"event: error\ndata: {json.dumps({'error': 'Board not found'})}\n\n"
+                break
+            except Exception as e:
+                yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+                time.sleep(5)
+    
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['Connection'] = 'keep-alive'
+    response['Access-Control-Allow-Origin'] = '*'
+    
+    return response
+
+def get_enhanced_section_data(board_id, section, user):
+    """Get section data with additional statistics and metadata for fullscreen display"""
+    board = PlanningBoard.objects.get(pk=board_id, created_by=user)
+    
+    base_data = {
+        'section': section,
+        'board_id': board.pk,
+        'board_title': board.title,
+        'board_date': board.today_date.strftime('%Y-%m-%d'),
+        'timestamp': timezone.now().isoformat(),
+        'last_updated': board.updated_at.isoformat(),
+        'data': [],
+        'statistics': {},
+        'alerts': [],
+        'status': 'active'
+    }
+    
+    if section == 'today_assembly':
+        production_lines = board.production_lines.all().order_by('line_number')
+        base_data['title'] = 'Today Assembly Plan'
+        base_data['headers'] = [
+            'Line', 'A Shift Model', 'A Plan', 'A Actual', 'A %',
+            'B Shift Model', 'B Plan', 'B Actual', 'B %',
+            'C Shift Model', 'C Plan', 'C Actual', 'C %', 'Status'
+        ]
+        
+        total_plan = 0
+        total_actual = 0
+        line_statuses = {'on_target': 0, 'behind': 0, 'ahead': 0}
+        
+        for line in production_lines:
+            # Calculate efficiency percentages
+            a_efficiency = calculate_efficiency(line.a_shift_plan, line.a_shift_actual)
+            b_efficiency = calculate_efficiency(line.b_shift_plan, line.b_shift_actual)
+            c_efficiency = calculate_efficiency(line.c_shift_plan, line.c_shift_actual)
+            
+            # Determine line status
+            avg_efficiency = (a_efficiency + b_efficiency + c_efficiency) / 3 if any([a_efficiency, b_efficiency, c_efficiency]) else 0
+            if avg_efficiency >= 95:
+                status = 'On Target'
+                line_statuses['on_target'] += 1
+            elif avg_efficiency >= 85:
+                status = 'Behind'
+                line_statuses['behind'] += 1
+            else:
+                status = 'Critical'
+                line_statuses['behind'] += 1
+                
+            # Add alert for critical lines
+            if avg_efficiency < 85 and avg_efficiency > 0:
+                base_data['alerts'].append({
+                    'type': 'warning',
+                    'message': f'{line.line_number}: Production below 85%',
+                    'efficiency': avg_efficiency
+                })
+            
+            total_plan += (line.a_shift_plan or 0) + (line.b_shift_plan or 0) + (line.c_shift_plan or 0)
+            total_actual += (line.a_shift_actual or 0) + (line.b_shift_actual or 0) + (line.c_shift_actual or 0)
+            
+            base_data['data'].append([
+                line.line_number or '',
+                line.a_shift_model or '-',
+                line.a_shift_plan or 0,
+                line.a_shift_actual or 0,
+                f"{a_efficiency}%",
+                line.b_shift_model or '-',
+                line.b_shift_plan or 0,
+                line.b_shift_actual or 0,
+                f"{b_efficiency}%",
+                line.c_shift_model or '-',
+                line.c_shift_plan or 0,
+                line.c_shift_actual or 0,
+                f"{c_efficiency}%",
+                status
+            ])
+        
+        base_data['statistics'] = {
+            'total_lines': production_lines.count(),
+            'total_plan': total_plan,
+            'total_actual': total_actual,
+            'overall_efficiency': calculate_efficiency(total_plan, total_actual),
+            'lines_on_target': line_statuses['on_target'],
+            'lines_behind': line_statuses['behind'],
+            'lines_ahead': line_statuses['ahead'],
+        }
+    
+    elif section == 'critical_parts':
+        critical_parts = board.critical_parts.all().order_by('part_name')
+        base_data['title'] = 'Critical Parts Status'
+        base_data['headers'] = ['Part Name', 'Supplier', 'Plan Qty', 'Status', 'ETA', 'Risk Level']
+        
+        status_counts = {'received': 0, 'pending': 0, 'delayed': 0}
+        risk_counts = {'low': 0, 'medium': 0, 'high': 0}
+        
+        for part in critical_parts:
+            # Determine status and risk
+            if part.receiving_time:
+                if part.receiving_time <= timezone.now():
+                    status = 'Received'
+                    status_counts['received'] += 1
+                    risk = 'Low'
+                    risk_counts['low'] += 1
+                elif part.receiving_time <= timezone.now() + timedelta(hours=2):
+                    status = 'Due Soon'
+                    status_counts['pending'] += 1
+                    risk = 'Medium'
+                    risk_counts['medium'] += 1
+                else:
+                    status = 'Scheduled'
+                    status_counts['pending'] += 1
+                    risk = 'Low'
+                    risk_counts['low'] += 1
+                    
+                eta = part.receiving_time.strftime('%H:%M')
+            else:
+                status = 'TBD'
+                eta = 'TBD'
+                risk = 'High'
+                status_counts['delayed'] += 1
+                risk_counts['high'] += 1
+                
+                # Add alert for TBD parts
+                base_data['alerts'].append({
+                    'type': 'error',
+                    'message': f'{part.part_name}: No receiving time set',
+                    'supplier': part.supplier
+                })
+            
+            base_data['data'].append([
+                part.part_name or '',
+                part.supplier or '',
+                part.plan_qty or 0,
+                status,
+                eta,
+                risk
+            ])
+        
+        base_data['statistics'] = {
+            'total_parts': critical_parts.count(),
+            'received': status_counts['received'],
+            'pending': status_counts['pending'],
+            'delayed': status_counts['delayed'],
+            'high_risk': risk_counts['high'],
+            'medium_risk': risk_counts['medium'],
+            'low_risk': risk_counts['low'],
+        }
+    
+    # Add similar enhanced processing for other sections
+    elif section in ['tomorrow_assembly', 'next_day_assembly']:
+        if section == 'tomorrow_assembly':
+            plans = board.tomorrow_plans.all().order_by('model')
+            base_data['title'] = 'Tomorrow Assembly Plan'
+        else:
+            plans = board.next_day_plans.all().order_by('model')
+            base_data['title'] = 'Next Day Assembly Plan'
+            
+        base_data['headers'] = ['Model', 'A Shift', 'B Shift', 'C Shift', 'Total', 'Priority']
+        
+        total_planned = 0
+        shift_totals = {'a': 0, 'b': 0, 'c': 0}
+        
+        for plan in plans:
+            a_shift = plan.a_shift or 0
+            b_shift = plan.b_shift or 0
+            c_shift = plan.c_shift or 0
+            total = a_shift + b_shift + c_shift
+            
+            # Determine priority based on total quantity
+            if total > 500:
+                priority = 'High'
+            elif total > 200:
+                priority = 'Medium'
+            else:
+                priority = 'Low'
+            
+            shift_totals['a'] += a_shift
+            shift_totals['b'] += b_shift
+            shift_totals['c'] += c_shift
+            total_planned += total
+            
+            base_data['data'].append([
+                plan.model or '',
+                a_shift,
+                b_shift,
+                c_shift,
+                total,
+                priority
+            ])
+        
+        base_data['statistics'] = {
+            'total_models': plans.count(),
+            'total_planned': total_planned,
+            'a_shift_total': shift_totals['a'],
+            'b_shift_total': shift_totals['b'],
+            'c_shift_total': shift_totals['c'],
+        }
+    
+    elif section == 'afm_plans':
+        afm_plans = board.afm_plans.all().order_by('plan_type', 'part_name')
+        base_data['title'] = 'AFM Plans'
+        base_data['headers'] = ['Type', 'Part Name', 'Part Number', 'Plan Qty', 'Remarks']
+        
+        type_counts = {'FCIN': 0, 'IU': 0}
+        total_qty = 0
+        
+        for plan in afm_plans:
+            type_counts[plan.plan_type] = type_counts.get(plan.plan_type, 0) + 1
+            total_qty += plan.plan_qty or 0
+            
+            base_data['data'].append([
+                plan.plan_type or '',
+                plan.part_name or '',
+                plan.part_number or '',
+                plan.plan_qty or 0,
+                (plan.remarks or '')[:50]
+            ])
+        
+        base_data['statistics'] = {
+            'total_plans': afm_plans.count(),
+            'fcin_count': type_counts.get('FCIN', 0),
+            'iu_count': type_counts.get('IU', 0),
+            'total_quantity': total_qty,
+        }
+    
+    elif section == 'spd_plans':
+        spd_plans = board.spd_plans.all().order_by('customer', 'part_name')
+        base_data['title'] = 'SPD Plans (Customer-wise)'
+        base_data['headers'] = ['Customer', 'Part Name', 'Part Number', 'Plan Qty', 'Remarks']
+        
+        customer_counts = {}
+        total_qty = 0
+        
+        for plan in spd_plans:
+            customer_counts[plan.customer] = customer_counts.get(plan.customer, 0) + 1
+            total_qty += plan.plan_qty or 0
+            
+            base_data['data'].append([
+                plan.customer or '',
+                plan.part_name or '',
+                plan.part_number or '',
+                plan.plan_qty or 0,
+                (plan.remarks or '')[:50]
+            ])
+        
+        base_data['statistics'] = {
+            'total_plans': spd_plans.count(),
+            'customer_breakdown': customer_counts,
+            'total_quantity': total_qty,
+        }
+    
+    elif section == 'other_info':
+        other_info = board.other_info.all().order_by('target_date', 'part_name')
+        base_data['title'] = 'Other Information'
+        base_data['headers'] = ['Part Name', 'Quantity', 'Target Date', 'Days Left', 'Remarks']
+        
+        total_items = 0
+        due_soon = 0
+        
+        for info in other_info:
+            days_left = (info.target_date - timezone.now().date()).days if info.target_date else 0
+            if days_left <= 3:
+                due_soon += 1
+            total_items += 1
+            
+            base_data['data'].append([
+                info.part_name or '',
+                info.qty or 0,
+                info.target_date.strftime('%Y-%m-%d') if info.target_date else '',
+                days_left,
+                (info.remarks or '')[:50]
+            ])
+        
+        base_data['statistics'] = {
+            'total_items': total_items,
+            'due_soon': due_soon,
+        }
+    
+    return base_data
+
+def calculate_efficiency(plan, actual):
+    """Calculate efficiency percentage"""
+    if not plan or plan == 0:
+        return 0
+    return round((actual or 0) / plan * 100, 1)
