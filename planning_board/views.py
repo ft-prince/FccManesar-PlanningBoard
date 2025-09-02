@@ -242,12 +242,12 @@ def extract_production_lines(worksheet, board):
     try:
         # Define production lines and their starting row positions
         line_configs = [
-            {'name': 'CLUTCH ASSY LINE-3', 'start_row': 16, 'max_rows': 5},
-            {'name': 'CLUTCH ASSY LINE-2', 'start_row': 10, 'max_rows': 5},
-            {'name': 'PULLEY ASSY LINE-1', 'start_row': 7, 'max_rows': 2},
-            {'name': 'FMD/FFD', 'start_row': 22, 'max_rows': 3},
-            {'name': 'NEW BUSINESS', 'start_row': 26, 'max_rows': 2},
+            {'name': 'PULLEY ASSY LINE-1', 'start_row': 7, 'max_rows': 3},    # 3 items
+            {'name': 'CLUTCH ASSY LINE-3', 'start_row': 10, 'max_rows': 16},  # 17 items
+            {'name': 'CLUTCH ASSY LINE-2', 'start_row': 26, 'max_rows': 17},  # 16 items
+            {'name': 'FMD/FFD', 'start_row': 43, 'max_rows': 4},              # 3 items
         ]
+
         
         for config in line_configs:
             extract_single_production_line(worksheet, board, config)
@@ -296,8 +296,8 @@ def extract_row_data(worksheet, row):
             'a_shift': {
                 'model': get_cell_value(worksheet, row, 3),       # Column C
                 'plan': get_numeric_value(worksheet, row, 4),     # Column D
-                'actual': get_numeric_value(worksheet, row, 5),   # Column E
-                'plan_change': get_numeric_value(worksheet, row, 6), # Column F
+                'plan_change': get_numeric_value(worksheet, row, 5), # Column F
+                'actual': get_numeric_value(worksheet, row, 6),   # Column E
                 'time': get_time_value(worksheet, row, 7),        # Column G
                 'remarks': get_cell_value(worksheet, row, 8),     # Column H
             },
@@ -305,8 +305,8 @@ def extract_row_data(worksheet, row):
             'b_shift': {
                 'model': get_cell_value(worksheet, row, 9),       # Column I
                 'plan': get_numeric_value(worksheet, row, 10),    # Column J
-                'actual': get_numeric_value(worksheet, row, 11),  # Column K
-                'plan_change': get_numeric_value(worksheet, row, 12), # Column L
+                'plan_change': get_numeric_value(worksheet, row, 11), # Column L
+                'actual': get_numeric_value(worksheet, row, 12),  # Column K
                 'time': get_time_value(worksheet, row, 13),       # Column M
                 'remarks': get_cell_value(worksheet, row, 14),    # Column N
             },
@@ -314,9 +314,9 @@ def extract_row_data(worksheet, row):
             'c_shift': {
                 'model': get_cell_value(worksheet, row, 15),      # Column O
                 'plan': get_numeric_value(worksheet, row, 16),    # Column P
-                'actual': get_numeric_value(worksheet, row, 17),  # Column Q
-                'plan_change': get_numeric_value(worksheet, row, 18), # Column R
-                'remarks': get_cell_value(worksheet, row, 19),    # Column S
+                'plan_change': get_numeric_value(worksheet, row, 17), # Column R
+                'actual': get_numeric_value(worksheet, row, 18),  # Column Q
+                'remarks': get_cell_value(worksheet, row, 20),    # Column S
             }
         }
     except Exception as e:
@@ -424,24 +424,24 @@ def extract_future_plans_fixed(worksheet, board):
         
         # TOMORROW PLAN COLUMNS (typically starts around column T/U)
         tomorrow_config = {
-            'model_col': 20,     # Column T - TOMORROW MODEL
-            'a_shift_col': 21,   # Column U - TOMORROW A SHIFT  
-            'b_shift_col': 22,   # Column V - TOMORROW B SHIFT
-            'c_shift_col': 23,   # Column W - TOMORROW C SHIFT
-            'remarks_col': 24,   # Column X - TOMORROW REMARKS
+            'model_col': 21,     # Column T - TOMORROW MODEL
+            'a_shift_col': 22,   # Column U - TOMORROW A SHIFT  
+            'b_shift_col': 23,   # Column V - TOMORROW B SHIFT
+            'c_shift_col': 24,   # Column W - TOMORROW C SHIFT
+            'remarks_col': 25,   # Column X - TOMORROW REMARKS
             'start_row': 7,      # Data starts at row 7
-            'end_row': 30        # Data ends at row 30
+            'end_row': 46        # Data ends at row 30
         }
         
         # NEXT DAY PLAN COLUMNS (typically starts around column Y/Z)
         next_day_config = {
-            'model_col': 25,     # Column Y - NEXT DAY MODEL
-            'a_shift_col': 26,   # Column Z - NEXT DAY A SHIFT
-            'b_shift_col': 27,   # Column AA - NEXT DAY B SHIFT
-            'c_shift_col': 28,   # Column AB - NEXT DAY C SHIFT
-            'remarks_col': 29,   # Column AC - NEXT DAY REMARKS
+            'model_col': 26,     # Column Y - NEXT DAY MODEL
+            'a_shift_col': 27,   # Column Z - NEXT DAY A SHIFT
+            'b_shift_col': 28,   # Column AA - NEXT DAY B SHIFT
+            'c_shift_col': 29,   # Column AB - NEXT DAY C SHIFT
+            'remarks_col': 30,   # Column AC - NEXT DAY REMARKS
             'start_row': 7,      # Data starts at row 7
-            'end_row': 30        # Data ends at row 30
+            'end_row': 46        # Data ends at row 30
         }
         
         print("Extracting TOMORROW plans with config:", tomorrow_config)
@@ -647,10 +647,10 @@ def extract_spd_plans_fixed(worksheet, board, start_row, customer):
         
         # Column positions for different customers
         customer_cols = {
-            'MSIL': {'part': 15, 'num': 16, 'qty': 17, 'rem': 18},    # O, P, Q, R
-            'HMSI': {'part': 18, 'num': 19, 'qty': 20, 'rem': 21},   # R, S, T, U  
-            'IYM': {'part': 21, 'num': 22, 'qty': 23, 'rem': 24},    # U, V, W, X
-            'HMCL': {'part': 24, 'num': 25, 'qty': 26, 'rem': 27}    # X, Y, Z, AA
+            'MSIL': {'part': 15, 'num': 16, 'qty': 17, 'rem': 18},  # O, P, Q, R
+            'HMSI': {'part': 19, 'num': 20, 'qty': 21},             # S, T, U
+            'IYM':  {'part': 22, 'num': 23, 'qty': 24},             # V, W, X
+            'HMCL': {'part': 25, 'num': 26, 'qty': 27}              # Y, Z, AA
         }
         
         cols = customer_cols.get(customer, customer_cols['MSIL'])
@@ -660,7 +660,10 @@ def extract_spd_plans_fixed(worksheet, board, start_row, customer):
             part_name = get_cell_value(worksheet, row, cols['part'])
             part_number = get_cell_value(worksheet, row, cols['num'])
             plan_qty = get_numeric_value(worksheet, row, cols['qty'])
-            remarks = get_cell_value(worksheet, row, cols['rem'])
+            
+            # Remarks column only for customers that have it
+            remarks_col = cols.get('rem')
+            remarks = get_cell_value(worksheet, row, remarks_col) if remarks_col else ''
             
             # Skip if no part name
             if not part_name or not part_name.strip():
@@ -693,10 +696,10 @@ def extract_other_information_fixed(worksheet, board, start_row):
         
         # Extract data starting from row after header, scan more rows
         for row in range(start_row + 2, start_row + 25):
-            part_name = get_cell_value(worksheet, row, 27)   # Column AA
-            qty = get_numeric_value(worksheet, row, 28)      # Column AB
-            target_date_str = get_cell_value(worksheet, row, 29) # Column AC
-            remarks = get_cell_value(worksheet, row, 30)     # Column AD
+            part_name = get_cell_value(worksheet, row, 28)   # Column AA
+            qty = get_numeric_value(worksheet, row, 29)      # Column AB
+            target_date_str = get_cell_value(worksheet, row, 30) # Column AC
+            remarks = get_cell_value(worksheet, row, 31)     # Column AD
             
             # Skip if no part name
             if not part_name or not part_name.strip():
@@ -860,81 +863,168 @@ def ajax_add_production_line(request):
     
     return JsonResponse({'error': 'Invalid request'})
 
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from django.db.models import Q
+from datetime import datetime, timedelta
+from django.contrib import messages
+import logging
+
+logger = logging.getLogger(__name__)
+
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from django.utils import timezone
+from django.db.models import Q
+from datetime import datetime, timedelta
+from django.contrib import messages
+import logging
+
+logger = logging.getLogger(__name__)
+
 @login_required
 def planning_board_dashboard(request):
-    """Enhanced dashboard view with filtering capabilities"""
+    """Enhanced dashboard view with improved filtering capabilities"""
     
     # Get filter parameters
-    date_from = request.GET.get('date_from')
-    date_to = request.GET.get('date_to')
-    status_filter = request.GET.get('status')
+    date_from = request.GET.get('date_from', '').strip()
+    date_to = request.GET.get('date_to', '').strip()
+    status_filter = request.GET.get('status', '').strip()
     
     # Start with all boards for the user
     boards_query = PlanningBoard.objects.filter(created_by=request.user)
     
-    # Apply date filtering
-    if date_from:
-        try:
-            from_date = datetime.strptime(date_from, '%Y-%m-%d').date()
-            boards_query = boards_query.filter(today_date__gte=from_date)
-        except ValueError:
-            pass
-    
-    if date_to:
-        try:
-            to_date = datetime.strptime(date_to, '%Y-%m-%d').date()
-            boards_query = boards_query.filter(today_date__lte=to_date)
-        except ValueError:
-            pass
-    
-    # Apply status filtering
+    # Current date for calculations
     today = timezone.now().date()
-    if status_filter:
-        if status_filter == 'today':
-            boards_query = boards_query.filter(today_date=today)
-        elif status_filter == 'recent':
-            three_days_ago = today - timedelta(days=3)
-            boards_query = boards_query.filter(today_date__gte=three_days_ago)
-        elif status_filter == 'this_week':
-            week_start = today - timedelta(days=today.weekday())
-            boards_query = boards_query.filter(today_date__gte=week_start)
-        elif status_filter == 'this_month':
-            month_start = today.replace(day=1)
-            boards_query = boards_query.filter(today_date__gte=month_start)
+    
+    # Track if any filters were applied
+    filters_applied = bool(date_from or date_to or status_filter)
+    
+    try:
+        # Apply date filtering with better error handling
+        if date_from:
+            try:
+                from_date = datetime.strptime(date_from, '%Y-%m-%d').date()
+                boards_query = boards_query.filter(today_date__gte=from_date)
+                logger.debug(f"Applied date_from filter: {from_date}")
+            except ValueError as e:
+                logger.warning(f"Invalid date_from format: {date_from}")
+                messages.warning(request, f"Invalid 'From Date' format: {date_from}")
+                date_from = None  # Reset invalid date
+        
+        if date_to:
+            try:
+                to_date = datetime.strptime(date_to, '%Y-%m-%d').date()
+                boards_query = boards_query.filter(today_date__lte=to_date)
+                logger.debug(f"Applied date_to filter: {to_date}")
+            except ValueError as e:
+                logger.warning(f"Invalid date_to format: {date_to}")
+                messages.warning(request, f"Invalid 'To Date' format: {date_to}")
+                date_to = None  # Reset invalid date
+        
+        # Apply status filtering with improved logic
+        if status_filter:
+            if status_filter == 'today':
+                boards_query = boards_query.filter(today_date=today)
+                # Auto-set date fields for consistency
+                if not date_from:
+                    date_from = today.strftime('%Y-%m-%d')
+                if not date_to:
+                    date_to = today.strftime('%Y-%m-%d')
+                    
+            elif status_filter == 'recent':
+                three_days_ago = today - timedelta(days=3)
+                boards_query = boards_query.filter(today_date__gte=three_days_ago)
+                # Auto-set date fields for consistency
+                if not date_from:
+                    date_from = three_days_ago.strftime('%Y-%m-%d')
+                if not date_to:
+                    date_to = today.strftime('%Y-%m-%d')
+                    
+            elif status_filter == 'this_week':
+                # Get Monday of current week
+                week_start = today - timedelta(days=today.weekday())
+                boards_query = boards_query.filter(today_date__gte=week_start)
+                # Auto-set date fields for consistency
+                if not date_from:
+                    date_from = week_start.strftime('%Y-%m-%d')
+                if not date_to:
+                    date_to = today.strftime('%Y-%m-%d')
+                    
+            elif status_filter == 'this_month':
+                month_start = today.replace(day=1)
+                boards_query = boards_query.filter(today_date__gte=month_start)
+                # Auto-set date fields for consistency
+                if not date_from:
+                    date_from = month_start.strftime('%Y-%m-%d')
+                if not date_to:
+                    date_to = today.strftime('%Y-%m-%d')
+            
+            logger.debug(f"Applied status filter: {status_filter}")
+    
+    except Exception as e:
+        logger.error(f"Error applying filters: {e}")
+        messages.error(request, "Error applying filters. Please try again.")
+        # Reset to no filters
+        date_from = date_to = status_filter = None
+        boards_query = PlanningBoard.objects.filter(created_by=request.user)
     
     # If no filters applied and no request parameters, default to today's boards
-    elif not request.GET:
-        # Redirect to today's filter on first load
+    if not filters_applied and not request.GET:
+        logger.debug("No filters applied, redirecting to today's filter")
         return redirect(f"{request.path}?date_from={today}&date_to={today}&status=today")
     
-    # Order by most recent first
+    # Order by most recent first and get the filtered results
     filtered_boards = boards_query.order_by('-created_at')
     
-    # Get recent boards (last 5 regardless of filters for sidebar)
+    # Get recent boards (last 5 regardless of filters for sidebar/stats)
     recent_boards = PlanningBoard.objects.filter(
         created_by=request.user
     ).order_by('-created_at')[:5]
     
-    # Calculate statistics
-    total_boards = PlanningBoard.objects.filter(created_by=request.user).count()
+    # Calculate comprehensive statistics
+    user_boards = PlanningBoard.objects.filter(created_by=request.user)
+    
+    total_boards = user_boards.count()
+    
+    # Get total production lines for user's boards
     total_production_lines = ProductionLine.objects.filter(
         planning_board__created_by=request.user
-    ).count()
-    total_uploads = ExcelUpload.objects.filter(uploaded_by=request.user).count()
+    ).values('line_number').distinct().count()
     
     # Today's boards count
-    today_boards_count = PlanningBoard.objects.filter(
-        created_by=request.user, 
-        today_date=today
-    ).count()
+    today_boards_count = user_boards.filter(today_date=today).count()
     
     # This week's boards count
     week_start = today - timedelta(days=today.weekday())
-    week_boards_count = PlanningBoard.objects.filter(
-        created_by=request.user,
-        today_date__gte=week_start
-    ).count()
+    week_boards_count = user_boards.filter(today_date__gte=week_start).count()
     
+    # This month's boards count
+    month_start = today.replace(day=1)
+    month_boards_count = user_boards.filter(today_date__gte=month_start).count()
+    
+    # Get total uploads if ExcelUpload model exists
+    total_uploads = 0
+    try:
+        total_uploads = ExcelUpload.objects.filter(uploaded_by=request.user).count()
+    except:
+        # ExcelUpload model might not exist
+        pass
+    
+    # Validate date range
+    date_range_valid = True
+    if date_from and date_to:
+        try:
+            from_date_obj = datetime.strptime(date_from, '%Y-%m-%d').date()
+            to_date_obj = datetime.strptime(date_to, '%Y-%m-%d').date()
+            if from_date_obj > to_date_obj:
+                messages.warning(request, "'From Date' cannot be later than 'To Date'")
+                date_range_valid = False
+        except:
+            pass
+    
+    # Prepare context
     context = {
         'filtered_boards': filtered_boards,
         'recent_boards': recent_boards,
@@ -943,12 +1033,34 @@ def planning_board_dashboard(request):
         'total_uploads': total_uploads,
         'today_boards_count': today_boards_count,
         'week_boards_count': week_boards_count,
+        'month_boards_count': month_boards_count,
+        'filtered_count': filtered_boards.count(),
+        
         # Filter values to maintain state
         'filter_date_from': date_from,
         'filter_date_to': date_to,
         'filter_status': status_filter,
+        'filters_applied': filters_applied,
+        'date_range_valid': date_range_valid,
+        
+        # Helper dates
         'today_date': today.strftime('%Y-%m-%d'),
+        'week_start_date': week_start.strftime('%Y-%m-%d'),
+        'month_start_date': month_start.strftime('%Y-%m-%d'),
+        
+        # Debug info (remove in production)
+        'debug_info': {
+            'query_count': filtered_boards.count(),
+            'filters': {
+                'date_from': date_from,
+                'date_to': date_to,
+                'status': status_filter,
+            },
+            'sql_query': str(filtered_boards.query) if filtered_boards else None,
+        }
     }
+    
+    logger.debug(f"Dashboard context prepared with {filtered_boards.count()} filtered boards")
     
     return render(request, 'planning_board/dashboard.html', context)
 
@@ -962,7 +1074,6 @@ def planning_board_dashboard(request):
 
 
 # Add this to your views.py file
-
 import json
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -1441,7 +1552,7 @@ def process_other_info_data(data):
     
     return processed
 
-
+    
 
 
 
@@ -1457,8 +1568,6 @@ def process_other_info_data(data):
 
 #  new one 
 
-
-# Add these views to your existing views.py file
 
 import json
 import time
@@ -1576,11 +1685,11 @@ def get_section_data(request, board_id, section):
     
     if section == 'today_assembly':
         production_lines = board.production_lines.all().order_by('line_number')
-        data['title'] = 'Today Assembly Plan'
+        data['title'] = 'Today Assembly Plan  (A SHIFT TIMING  6:00 AM TO 2:30 PM) --- (B SHIFT TIMING 2:30 PM  TO 11:00 PM) --- (C SHIFT TIMING SHIFT TIMING 11:00PM TO 6:00 AM)'
         data['headers'] = [
             'Line No.', 'A Shift Model', 'A Plan', 'A Actual', 'A Change', 'A Time',
             'B Shift Model', 'B Plan', 'B Actual', 'B Change', 'B Time',
-            'C Shift Model', 'C Plan', 'C Actual', 'C Change', 'Remarks'
+            'C Shift Model', 'C Plan', 'C Actual', 'C Change', 'C Time'
         ]
         
         for line in production_lines:
@@ -1590,17 +1699,17 @@ def get_section_data(request, board_id, section):
                 line.a_shift_plan or 0,
                 line.a_shift_actual or 0,
                 line.a_shift_plan_change or 0,
-                str(line.a_shift_time) if line.a_shift_time else '',
+                str(line.a_shift_time) if line.a_shift_time else '6:00 AM TO 2:30 PM',
                 line.b_shift_model or '',
                 line.b_shift_plan or 0,
                 line.b_shift_actual or 0,
                 line.b_shift_plan_change or 0,
-                str(line.b_shift_time) if line.b_shift_time else '',
+                str(line.b_shift_time) if line.b_shift_time else '2:30 PM  TO 11:00 PM',
                 line.c_shift_model or '',
                 line.c_shift_plan or 0,
                 line.c_shift_actual or 0,
                 line.c_shift_plan_change or 0,
-                (line.a_shift_remarks or line.b_shift_remarks or line.c_shift_remarks or '')[:100]
+                ( '11:00PM TO 6:00 AM')[:100]
             ])
     
     elif section == 'tomorrow_assembly':

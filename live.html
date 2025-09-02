@@ -1,0 +1,1761 @@
+{% load static %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --primary: #3b82f6;
+        --primary-hover: #2563eb;
+        --primary-light: #dbeafe;
+        --secondary: #64748b;
+        --success: #10b981;
+        --warning: #f59e0b;
+        --error: #ef4444;
+        --info: #06b6d4;
+        
+        /* Color coding for actual vs plan */
+        --excellent: #10b981;    /* Green - Above plan */
+        --good: #84cc16;         /* Light green - On plan */
+        --warning: #f59e0b;      /* Yellow - Below plan */
+        --critical: #ef4444;     /* Red - Significantly below plan */
+        
+        --gray-50: #f8fafc;
+        --gray-100: #f1f5f9;
+        --gray-200: #e2e8f0;
+        --gray-300: #cbd5e1;
+        --gray-500: #64748b;
+        --gray-600: #475569;
+        --gray-700: #334155;
+        --gray-900: #0f172a;
+        
+        --spacing-xs: 0.5rem;
+        --spacing-sm: 0.75rem;
+        --spacing-md: 1rem;
+        --spacing-lg: 1.5rem;
+        --spacing-xl: 2rem;
+        
+        --radius-md: 0.5rem;
+        --radius-lg: 0.75rem;
+        --radius-xl: 1rem;
+        
+        --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+        --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+        color: var(--gray-900);
+        line-height: 1.6;
+        min-height: 100vh;
+    }
+
+    .container {
+        max-width: 100%;
+        margin: 0 auto;
+        padding: var(--spacing-lg);
+        transition: all 0.3s ease;
+    }
+
+    /* Fullscreen styles */
+    .fullscreen-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: white;
+        z-index: 9999;
+        display: none;
+        overflow: auto;
+    }
+
+    .fullscreen-overlay.active {
+        display: block;
+        animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+
+    .fullscreen-content {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .fullscreen-header {
+        background: var(--gray-900);
+        color: white;
+        padding: var(--spacing-md) var(--spacing-lg);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .fullscreen-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+    }
+
+    .fullscreen-controls {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-md);
+    }
+
+    .exit-fullscreen-btn {
+        background: rgba(255, 255, 255, 0.2);
+        border: none;
+        color: white;
+        padding: var(--spacing-sm) var(--spacing-md);
+        border-radius: var(--radius-md);
+        cursor: pointer;
+        font-size: 1rem;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+    }
+
+    .exit-fullscreen-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(1.05);
+    }
+
+    .fullscreen-data-content {
+        flex: 1;
+        padding: var(--spacing-lg);
+        overflow: auto;
+        background: var(--gray-50);
+    }
+
+    /* Header */
+    .header {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+        color: white;
+        padding: var(--spacing-lg);
+        border-radius: var(--radius-xl);
+        margin-bottom: var(--spacing-lg);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.08'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E") repeat;
+    }
+
+    .header-content {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: var(--spacing-md);
+    }
+
+    .header-title h1 {
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: var(--spacing-xs);
+    }
+
+    .header-status {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        background: rgba(255, 255, 255, 0.2);
+        padding: var(--spacing-sm) var(--spacing-md);
+        border-radius: var(--radius-md);
+        backdrop-filter: blur(10px);
+    }
+
+    .status-indicator {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: var(--success);
+        animation: pulse 2s infinite;
+    }
+
+    .status-indicator.disconnected {
+        background: var(--error);
+        animation: none;
+    }
+
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+
+    /* Control Panel */
+    .control-panel {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--gray-200);
+    }
+
+    .control-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: var(--spacing-lg);
+        align-items: end;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+
+    .form-group label {
+        font-weight: 600;
+        color: var(--gray-700);
+        font-size: 0.875rem;
+    }
+
+    .form-control {
+        padding: 0.75rem 1rem;
+        border: 2px solid var(--gray-300);
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        transition: all 0.2s;
+        background: white;
+    }
+
+    .form-control:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        text-decoration: none;
+    }
+
+    .btn-primary {
+        background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+        color: white;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .btn-secondary {
+        background: var(--gray-200);
+        color: var(--gray-700);
+    }
+
+    .btn-secondary:hover {
+        background: var(--gray-300);
+    }
+
+    .btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none !important;
+    }
+
+    /* Section Cards - Reduced Height */
+    .section-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-md);
+        margin-bottom: var(--spacing-lg);
+    }
+
+    .section-card {
+        background: white;
+        border-radius: var(--radius-lg);
+        padding: var(--spacing-md);
+        box-shadow: var(--shadow-sm);
+        border: 2px solid var(--gray-200);
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        min-height: 120px;
+    }
+
+    .section-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background: var(--gray-300);
+        transition: all 0.3s;
+    }
+
+    .section-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+        border-color: var(--primary);
+    }
+
+    .section-card:hover::before {
+        background: var(--primary);
+    }
+
+    .section-card.active {
+        border-color: var(--primary);
+        box-shadow: var(--shadow-lg);
+        transform: translateY(-2px);
+    }
+
+    .section-card.active::before {
+        background: var(--primary);
+    }
+
+    .section-icon {
+        font-size: 1.5rem;
+        margin-bottom: var(--spacing-xs);
+        display: block;
+    }
+
+    .section-title {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--gray-900);
+        margin-bottom: var(--spacing-xs);
+    }
+
+    .section-description {
+        font-size: 0.75rem;
+        color: var(--gray-600);
+        margin-bottom: var(--spacing-sm);
+        line-height: 1.4;
+    }
+
+    .section-stats {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: var(--spacing-xs);
+        border-top: 1px solid var(--gray-200);
+    }
+
+    .section-count {
+        font-weight: 600;
+        color: var(--primary);
+        font-size: 0.75rem;
+    }
+
+    .section-updated {
+        font-size: 0.65rem;
+        color: var(--gray-500);
+    }
+
+    /* Data Display - Full Width */
+    .data-display {
+        background: white;
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--gray-200);
+        overflow: hidden;
+        width: 100%;
+        margin: 0;
+    }
+
+    .data-header {
+        background: var(--gray-50);
+        padding: var(--spacing-md);
+        border-bottom: 1px solid var(--gray-200);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .data-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--gray-900);
+    }
+
+    .data-actions {
+        display: flex;
+        gap: var(--spacing-sm);
+        align-items: center;
+    }
+
+    .refresh-btn, .fullscreen-btn {
+        background: none;
+        border: none;
+        color: var(--primary);
+        cursor: pointer;
+        padding: var(--spacing-sm);
+        border-radius: var(--radius-md);
+        transition: all 0.2s;
+        font-size: 1.2rem;
+    }
+
+    .refresh-btn:hover, .fullscreen-btn:hover {
+        background: var(--primary-light);
+        transform: scale(1.1);
+    }
+
+    .refresh-btn.spinning {
+        animation: spin 1s linear infinite;
+    }
+
+    .fullscreen-btn {
+        font-size: 1.1rem;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .data-content {
+        padding: 0;
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    /* Enhanced Table Styles with Color Coding */
+    .table-container {
+        overflow-x: auto;
+        border-radius: 0;
+        width: 100%;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+        min-width: 800px;
+    }
+
+    .table th,
+    .table td {
+        padding: var(--spacing-sm);
+        text-align: left;
+        border-bottom: 1px solid var(--gray-200);
+        border-right: 1px solid var(--gray-200);
+    }
+
+    .table th {
+        background: var(--gray-100);
+        font-weight: 600;
+        color: var(--gray-700);
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        white-space: nowrap;
+    }
+
+    .table tbody tr {
+        transition: background-color 0.2s;
+    }
+
+    .table tbody tr:hover {
+        background: var(--gray-50);
+    }
+
+    .table tbody tr:nth-child(even) {
+        background: rgba(248, 250, 252, 0.5);
+    }
+
+    .table tbody tr.new-row {
+        animation: highlightRow 2s ease-out;
+    }
+
+    @keyframes highlightRow {
+        0% { background: var(--primary-light); }
+        100% { background: transparent; }
+    }
+
+    /* Performance Indicators with Color Coding */
+    .performance-cell {
+        position: relative;
+        font-weight: 600;
+        text-align: center;
+        padding: 0.5rem;
+        border-radius: var(--radius-md);
+        margin: 2px;
+    }
+
+    .performance-excellent {
+        background: linear-gradient(135deg, var(--excellent) 10%, rgba(16, 185, 129, 0.1));
+        color: white;
+        border: 2px solid var(--excellent);
+    }
+
+    .performance-good {
+        background: linear-gradient(135deg, var(--good) 10%, rgba(132, 204, 22, 0.1));
+        color: white;
+        border: 2px solid var(--good);
+    }
+
+    .performance-warning {
+        background: linear-gradient(135deg, var(--warning) 10%, rgba(245, 158, 11, 0.1));
+        color: white;
+        border: 2px solid var(--warning);
+    }
+
+    .performance-critical {
+        background: linear-gradient(135deg, var(--critical) 10%, rgba(239, 68, 68, 0.1));
+        color: white;
+        border: 2px solid var(--critical);
+        animation: pulse-critical 2s infinite;
+    }
+
+    @keyframes pulse-critical {
+        0%, 100% { 
+            opacity: 1; 
+            transform: scale(1);
+        }
+        50% { 
+            opacity: 0.8; 
+            transform: scale(1.02);
+        }
+    }
+
+    /* Progress bars for visual representation */
+    .progress-bar {
+        width: 100%;
+        height: 8px;
+        background: var(--gray-200);
+        border-radius: 4px;
+        overflow: hidden;
+        margin-top: 4px;
+        position: relative;
+    }
+
+    .progress-fill {
+        height: 100%;
+        transition: width 0.5s ease;
+        border-radius: 4px;
+    }
+
+    .progress-excellent .progress-fill {
+        background: var(--excellent);
+    }
+
+    .progress-good .progress-fill {
+        background: var(--good);
+    }
+
+    .progress-warning .progress-fill {
+        background: var(--warning);
+    }
+
+    .progress-critical .progress-fill {
+        background: var(--critical);
+    }
+
+    /* Status badges with enhanced colors */
+    .status-badge {
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-md);
+        font-size: 0.75rem;
+        font-weight: 500;
+        text-transform: uppercase;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .status-received {
+        background: var(--excellent);
+        color: white;
+    }
+
+    .status-pending {
+        background: var(--warning);
+        color: white;
+    }
+
+    .status-scheduled {
+        background: var(--info);
+        color: white;
+    }
+
+    .status-critical {
+        background: var(--critical);
+        color: white;
+        animation: pulse 1.5s infinite;
+    }
+
+    /* Numeric cell styling */
+    .numeric-cell {
+        text-align: right;
+        font-family: 'Monaco', 'Menlo', monospace;
+        font-weight: 600;
+    }
+
+    /* Alert enhancement */
+    .alert {
+        padding: var(--spacing-md);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--spacing-md);
+        border: 1px solid;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .alert::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+    }
+
+    .alert-info {
+        background: var(--primary-light);
+        border-color: var(--primary);
+        color: var(--primary-hover);
+    }
+
+    .alert-info::before {
+        background: var(--primary);
+    }
+
+    .alert-warning {
+        background: #fef3c7;
+        border-color: var(--warning);
+        color: #92400e;
+    }
+
+    .alert-warning::before {
+        background: var(--warning);
+    }
+
+    .alert-error {
+        background: #fee2e2;
+        border-color: var(--error);
+        color: #dc2626;
+    }
+
+    .alert-error::before {
+        background: var(--error);
+    }
+
+    /* Loading and error states */
+    .loading {
+        text-align: center;
+        padding: var(--spacing-xl);
+        color: var(--gray-500);
+    }
+
+    .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid var(--gray-200);
+        border-top: 3px solid var(--primary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto var(--spacing-md);
+    }
+
+    .error-state {
+        text-align: center;
+        padding: var(--spacing-xl);
+        color: var(--error);
+    }
+
+    .error-icon {
+        font-size: 3rem;
+        margin-bottom: var(--spacing-md);
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: var(--spacing-xl);
+        color: var(--gray-500);
+    }
+
+    .empty-icon {
+        font-size: 3rem;
+        margin-bottom: var(--spacing-md);
+        opacity: 0.5;
+    }
+
+    /* Legend for color coding */
+    .color-legend {
+        display: flex;
+        gap: var(--spacing-lg);
+        align-items: center;
+        margin-bottom: var(--spacing-md);
+        padding: var(--spacing-sm);
+        background: var(--gray-50);
+        border-radius: var(--radius-md);
+        font-size: 0.8rem;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+    }
+
+    .legend-color {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 2px solid;
+    }
+
+    .legend-excellent .legend-color {
+        background: var(--excellent);
+        border-color: var(--excellent);
+    }
+
+    .legend-good .legend-color {
+        background: var(--good);
+        border-color: var(--good);
+    }
+
+    .legend-warning .legend-color {
+        background: var(--warning);
+        border-color: var(--warning);
+    }
+
+    .legend-critical .legend-color {
+        background: var(--critical);
+        border-color: var(--critical);
+    }
+
+    /* Connection status */
+    .connection-status {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-xs);
+        font-size: 0.875rem;
+    }
+
+    .connection-status.connected {
+        color: var(--success);
+    }
+
+    .connection-status.disconnected {
+        color: var(--error);
+    }
+
+    .connection-status.connecting {
+        color: var(--warning);
+    }
+
+    /* Fullscreen table adjustments */
+    .fullscreen-overlay .table {
+        font-size: 1rem;
+    }
+
+    .fullscreen-overlay .table th,
+    .fullscreen-overlay .table td {
+        padding: 1rem;
+    }
+
+    .fullscreen-overlay .table th {
+        font-size: 0.9rem;
+    }
+
+    .fullscreen-overlay .color-legend {
+        font-size: 0.9rem;
+        padding: var(--spacing-md);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+        .container {
+            padding: var(--spacing-md);
+        }
+        
+        .section-cards {
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        }
+    }
+
+    @media (max-width: 768px) {
+        .header-content {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .control-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .section-cards {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .data-header {
+            flex-direction: column;
+            gap: var(--spacing-sm);
+            text-align: center;
+        }
+
+        .color-legend {
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .fullscreen-header {
+            flex-direction: column;
+            gap: var(--spacing-sm);
+            text-align: center;
+        }
+
+        .fullscreen-controls {
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="header">
+        <div class="header-content">
+            <div class="header-title">
+                <h1>🏭 Production Planning Live View</h1>
+                <p>Real-time monitoring with performance indicators</p>
+            </div>
+            <div class="header-status">
+                <div class="status-indicator" id="connectionIndicator"></div>
+                <div class="connection-status" id="connectionStatus">
+                    <span>Disconnected</span>
+                </div>
+                <span id="lastUpdate">Never</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Control Panel -->
+    <div class="control-panel">
+        <div class="control-grid">
+            <div class="form-group">
+                <label for="boardSelect">Select Planning Board</label>
+                <select id="boardSelect" class="form-control">
+                    <option value="">Loading planning boards...</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="refreshInterval">Refresh Interval</label>
+                <select id="refreshInterval" class="form-control">
+                    <option value="5000">Every 5 seconds</option>
+                    <option value="10000" selected>Every 10 seconds</option>
+                    <option value="30000">Every 30 seconds</option>
+                    <option value="60000">Every minute</option>
+                    <option value="0">Manual only</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>&nbsp;</label>
+                <div style="display: flex; gap: var(--spacing-sm);">
+                    <button class="btn btn-primary" id="startStreamBtn" onclick="startStreaming()" disabled>
+                        ▶️ Start Live View
+                    </button>
+                    <button class="btn btn-secondary" id="stopStreamBtn" onclick="stopStreaming()" disabled>
+                        ⏹️ Stop
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Area -->
+    <div id="alertArea"></div>
+
+    <!-- Section Selection -->
+    <div class="section-cards" id="sectionCards">
+        <div class="section-card" data-section="today_assembly">
+            <div class="section-icon">📋</div>
+            <div class="section-title">Today Assembly</div>
+            <div class="section-description">Current day production with performance tracking</div>
+            <div class="section-stats">
+                <span class="section-count" data-count="today_assembly">0 lines</span>
+                <span class="section-updated" data-updated="today_assembly">Not loaded</span>
+            </div>
+        </div>
+
+        <div class="section-card" data-section="tomorrow_assembly">
+            <div class="section-icon">📅</div>
+            <div class="section-title">Tomorrow Assembly</div>
+            <div class="section-description">Next day production planning</div>
+            <div class="section-stats">
+                <span class="section-count" data-count="tomorrow_assembly">0 models</span>
+                <span class="section-updated" data-updated="tomorrow_assembly">Not loaded</span>
+            </div>
+        </div>
+
+        <div class="section-card" data-section="next_day_assembly">
+            <div class="section-icon">⏭️</div>
+            <div class="section-title">Next Day Assembly</div>
+            <div class="section-description">Day after tomorrow planning</div>
+            <div class="section-stats">
+                <span class="section-count" data-count="next_day_assembly">0 models</span>
+                <span class="section-updated" data-updated="next_day_assembly">Not loaded</span>
+            </div>
+        </div>
+
+        <div class="section-card" data-section="critical_parts">
+            <div class="section-icon">⚠️</div>
+            <div class="section-title">Critical Parts</div>
+            <div class="section-description">Critical parts with status tracking</div>
+            <div class="section-stats">
+                <span class="section-count" data-count="critical_parts">0 parts</span>
+                <span class="section-updated" data-updated="critical_parts">Not loaded</span>
+            </div>
+        </div>
+
+        <div class="section-card" data-section="afm_plans">
+            <div class="section-icon">🔧</div>
+            <div class="section-title">AFM Plans</div>
+            <div class="section-description">FCIN (MNS) and I/U planning</div>
+            <div class="section-stats">
+                <span class="section-count" data-count="afm_plans">0 items</span>
+                <span class="section-updated" data-updated="afm_plans">Not loaded</span>
+            </div>
+        </div>
+
+        <div class="section-card" data-section="spd_plans">
+            <div class="section-icon">🏢</div>
+            <div class="section-title">SPD Plans</div>
+            <div class="section-description">Customer-wise SPD planning</div>
+            <div class="section-stats">
+                <span class="section-count" data-count="spd_plans">0 items</span>
+                <span class="section-updated" data-updated="spd_plans">Not loaded</span>
+            </div>
+        </div>
+
+        <div class="section-card" data-section="other_info">
+            <div class="section-icon">📝</div>
+            <div class="section-title">Other Info</div>
+            <div class="section-description">Additional production information</div>
+            <div class="section-stats">
+                <span class="section-count" data-count="other_info">0 items</span>
+                <span class="section-updated" data-updated="other_info">Not loaded</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Display Area -->
+    <div class="data-display" id="dataDisplay" style="display: none;">
+        <div class="data-header">
+            <div class="data-title" id="dataTitle">Select a section to view data</div>
+            <div class="data-actions">
+                <span class="connection-status" id="sectionConnectionStatus">
+                    <span>Disconnected</span>
+                </span>
+                <button class="refresh-btn" id="refreshBtn" onclick="refreshData()" title="Refresh data">
+                    🔄
+                </button>
+                <button class="fullscreen-btn" id="fullscreenBtn" onclick="enterCustomFullscreen()" title="View in fullscreen">
+                    ⛶ Enter Fullscreen
+                </button>
+                <button class="btn btn-secondary" onclick="triggerUpdate()" title="Trigger update (for testing)">
+                    ⚡ Test Update
+                </button>
+            </div>
+        </div>
+        <div class="color-legend" id="colorLegend" style="display: none;">
+            <div class="legend-item legend-excellent">
+                <div class="legend-color"></div>
+                <span>Excellent (≥110% of plan)</span>
+            </div>
+            <div class="legend-item legend-good">
+                <div class="legend-color"></div>
+                <span>Good (90-109% of plan)</span>
+            </div>
+            <div class="legend-item legend-warning">
+                <div class="legend-color"></div>
+                <span>Warning (70-89% of plan)</span>
+            </div>
+            <div class="legend-item legend-critical">
+                <div class="legend-color"></div>
+                <span>Critical (<70% of plan)</span>
+            </div>
+        </div>
+        <div class="data-content" id="dataContent">
+            <!-- Dynamic content will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Fullscreen Overlay -->
+<div class="fullscreen-overlay" id="fullscreenOverlay">
+    <div class="fullscreen-content">
+        <div class="fullscreen-header">
+            <div class="fullscreen-title" id="fullscreenTitle">
+                <span>📊</span>
+                <span>Production Planning Data</span>
+            </div>
+            <div class="fullscreen-controls">
+                <div class="connection-status" id="fullscreenConnectionStatus">
+                    <span>Disconnected</span>
+                </div>
+                <button class="refresh-btn" id="fullscreenRefreshBtn" onclick="refreshData()" title="Refresh data">
+                    🔄
+                </button>
+                <button class="exit-fullscreen-btn" onclick="exitCustomFullscreen()" title="Exit fullscreen">
+                    ✕ Exit Fullscreen
+                </button>
+            </div>
+        </div>
+        <div class="fullscreen-data-content">
+            <div class="color-legend" id="fullscreenColorLegend" style="display: none;">
+                <div class="legend-item legend-excellent">
+                    <div class="legend-color"></div>
+                    <span>Excellent (≥110% of plan)</span>
+                </div>
+                <div class="legend-item legend-good">
+                    <div class="legend-color"></div>
+                    <span>Good (90-109% of plan)</span>
+                </div>
+                <div class="legend-item legend-warning">
+                    <div class="legend-color"></div>
+                    <span>Warning (70-89% of plan)</span>
+                </div>
+                <div class="legend-item legend-critical">
+                    <div class="legend-color"></div>
+                    <span>Critical (<70% of plan)</span>
+                </div>
+            </div>
+            <div id="fullscreenDataContent">
+                <!-- Fullscreen content will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Global variables
+    let currentSection = null;
+    let currentBoard = null;
+    let eventSource = null;
+    let isStreaming = false;
+    let refreshInterval = null;
+    let isFullscreen = false;
+
+    // Initialize the application
+    document.addEventListener('DOMContentLoaded', function() {
+        setupEventListeners();
+        loadPlanningBoards();
+        updateConnectionStatus('disconnected');
+        setupFullscreenEventListeners();
+    });
+
+    function setupEventListeners() {
+        // Section card click handlers
+        document.querySelectorAll('.section-card').forEach(card => {
+            card.addEventListener('click', function() {
+                if (currentBoard) {
+                    selectSection(this.dataset.section);
+                } else {
+                    showAlert('Please select a planning board first.', 'warning');
+                }
+            });
+        });
+
+        // Board selection change
+        document.getElementById('boardSelect').addEventListener('change', function() {
+            currentBoard = this.value;
+            if (currentBoard) {
+                document.getElementById('startStreamBtn').disabled = false;
+                loadBoardSections();
+                if (currentSection) {
+                    loadSectionData(currentSection);
+                }
+            } else {
+                document.getElementById('startStreamBtn').disabled = true;
+                if (isStreaming) {
+                    stopStreaming();
+                }
+            }
+        });
+
+        // Refresh interval change
+        document.getElementById('refreshInterval').addEventListener('change', function() {
+            if (isStreaming) {
+                restartStreaming();
+            }
+        });
+    }
+
+    function setupFullscreenEventListeners() {
+        // Escape key to exit fullscreen
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape' && isFullscreen) {
+                exitCustomFullscreen();
+            }
+        });
+
+        // F11 or F key for fullscreen toggle
+        document.addEventListener('keydown', function(event) {
+            if ((event.key === 'F11' || (event.key === 'f' && event.ctrlKey)) && currentSection) {
+                event.preventDefault();
+                if (isFullscreen) {
+                    exitCustomFullscreen();
+                } else {
+                    enterCustomFullscreen();
+                }
+            }
+        });
+    }
+
+    function loadPlanningBoards() {
+        fetch('{% url "planning_board:api_boards" %}')
+            .then(response => response.json())
+            .then(data => {
+                const select = document.getElementById('boardSelect');
+                // Clear existing options
+                select.innerHTML = '<option value="">Choose a planning board...</option>';
+                
+                if (data.boards && data.boards.length > 0) {
+                    // Sort boards by date (latest first)
+                    const sortedBoards = data.boards.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    
+                    sortedBoards.forEach(board => {
+                        const option = document.createElement('option');
+                        option.value = board.id;
+                        option.textContent = `${board.title} - ${board.date}`;
+                        select.appendChild(option);
+                    });
+                    
+                    // Auto-select the latest board (first in sorted list)
+                    select.value = sortedBoards[0].id;
+                    currentBoard = sortedBoards[0].id;
+                    document.getElementById('startStreamBtn').disabled = false;
+                    
+                    // Load board sections automatically
+                    loadBoardSections();
+                    
+                    showAlert(`Auto-selected latest planning board: ${sortedBoards[0].title}`, 'info');
+                }
+            })
+            .catch(error => {
+                console.error('Error loading boards:', error);
+                showAlert('Failed to load planning boards', 'error');
+            });
+    }
+
+    function loadBoardSections() {
+        if (!currentBoard) return;
+
+        fetch(`/planning/api/board/${currentBoard}/sections/`)
+            .then(response => response.json())
+            .then(data => {
+                updateSectionCards(data.sections);
+                
+                // Auto-select "Today Assembly" section if it exists and no section is currently selected
+                if (!currentSection) {
+                    const todayAssemblyCard = document.querySelector('[data-section="today_assembly"]');
+                    if (todayAssemblyCard) {
+                        selectSection('today_assembly');
+                        showAlert('Auto-selected Today Assembly section', 'info');
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error loading board sections:', error);
+                showAlert('Failed to load board sections', 'error');
+            });
+    }
+
+    function updateSectionCards(sections) {
+        Object.keys(sections).forEach(sectionName => {
+            const section = sections[sectionName];
+            const countElement = document.querySelector(`[data-count="${sectionName}"]`);
+            const updatedElement = document.querySelector(`[data-updated="${sectionName}"]`);
+            
+            if (countElement) {
+                countElement.textContent = `${section.count} items`;
+            }
+            if (updatedElement) {
+                updatedElement.textContent = formatTimeAgo(section.last_updated);
+            }
+        });
+    }
+
+    function selectSection(sectionName) {
+        // Update active section
+        document.querySelectorAll('.section-card').forEach(card => {
+            card.classList.remove('active');
+        });
+        document.querySelector(`[data-section="${sectionName}"]`).classList.add('active');
+
+        currentSection = sectionName;
+        
+        // Show data display area and color legend
+        document.getElementById('dataDisplay').style.display = 'block';
+        document.getElementById('colorLegend').style.display = 'flex';
+        
+        // Load section data
+        if (currentBoard) {
+            loadSectionData(sectionName);
+            
+            // If streaming is active, restart with new section
+            if (isStreaming) {
+                restartStreaming();
+            }
+        }
+    }
+
+    function loadSectionData(sectionName) {
+        if (!currentBoard) return;
+
+        showLoading();
+        
+        fetch(`/planning/api/board/${currentBoard}/section/${sectionName}/`)
+            .then(response => response.json())
+            .then(data => {
+                displaySectionData(data);
+                updateLastUpdate();
+            })
+            .catch(error => {
+                console.error('Error loading section data:', error);
+                showError('Failed to load section data');
+            });
+    }
+
+    function displaySectionData(data) {
+        document.getElementById('dataTitle').textContent = data.title;
+        document.getElementById('fullscreenTitle').innerHTML = `<span>📊</span><span>${data.title}</span>`;
+        
+        if (data.data && data.data.length > 0) {
+            const tableHtml = createEnhancedTableHtml(data.headers, data.data);
+            document.getElementById('dataContent').innerHTML = tableHtml;
+            
+            // Update fullscreen content if in fullscreen mode
+            if (isFullscreen) {
+                document.getElementById('fullscreenDataContent').innerHTML = tableHtml;
+            }
+        } else {
+            const emptyStateHtml = `
+                <div class="empty-state">
+                    <div class="empty-icon">📋</div>
+                    <h3>No Data Available</h3>
+                    <p>No data found for this section.</p>
+                </div>
+            `;
+            document.getElementById('dataContent').innerHTML = emptyStateHtml;
+            
+            if (isFullscreen) {
+                document.getElementById('fullscreenDataContent').innerHTML = emptyStateHtml;
+            }
+        }
+    }
+
+    function enterCustomFullscreen() {
+        if (!currentSection) {
+            showAlert('Please select a section first', 'warning');
+            return;
+        }
+
+        const overlay = document.getElementById('fullscreenOverlay');
+        const dataContent = document.getElementById('dataContent').innerHTML;
+        
+        // Copy current data to fullscreen
+        document.getElementById('fullscreenDataContent').innerHTML = dataContent;
+        
+        // Show color legend in fullscreen if it's currently visible
+        const colorLegend = document.getElementById('colorLegend');
+        const fullscreenColorLegend = document.getElementById('fullscreenColorLegend');
+        if (colorLegend.style.display === 'flex') {
+            fullscreenColorLegend.style.display = 'flex';
+        }
+        
+        // Update connection status in fullscreen
+        const connectionStatus = document.getElementById('sectionConnectionStatus');
+        const fullscreenConnectionStatus = document.getElementById('fullscreenConnectionStatus');
+        fullscreenConnectionStatus.className = connectionStatus.className;
+        fullscreenConnectionStatus.innerHTML = connectionStatus.innerHTML;
+        
+        // Show fullscreen overlay
+        overlay.classList.add('active');
+        isFullscreen = true;
+        
+        // Hide scrollbars on body
+        document.body.style.overflow = 'hidden';
+        
+        showAlert('Entered fullscreen mode. Press ESC or F11 to exit.', 'info');
+    }
+
+    function exitCustomFullscreen() {
+        const overlay = document.getElementById('fullscreenOverlay');
+        overlay.classList.remove('active');
+        isFullscreen = false;
+        
+        // Restore scrollbars on body
+        document.body.style.overflow = 'auto';
+        
+        showAlert('Exited fullscreen mode', 'info');
+    }
+
+    function createEnhancedTableHtml(headers, data) {
+        let html = `
+            <div class="table-container">
+                <table class="table">
+                    <thead>
+                        <tr>
+        `;
+        
+        headers.forEach(header => {
+            html += `<th>${header}</th>`;
+        });
+        
+        html += `
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
+        
+        data.forEach((row, index) => {
+            html += `<tr>`;
+            row.forEach((cell, cellIndex) => {
+                const header = headers[cellIndex].toLowerCase();
+                let cellContent = cell;
+                let cellClass = '';
+                
+                // Check if this is a numeric comparison field
+                if (isNumericComparisonField(header)) {
+                    const performance = calculatePerformance(row, headers, cellIndex);
+                    if (performance) {
+                        cellContent = formatPerformanceCell(cell, performance);
+                        cellClass = `performance-cell ${performance.class}`;
+                    } else {
+                        cellClass = 'numeric-cell';
+                    }
+                } else if (isStatusField(header)) {
+                    cellContent = formatStatusBadge(cell);
+                } else if (isNumericField(cell)) {
+                    cellClass = 'numeric-cell';
+                    cellContent = formatNumber(cell);
+                }
+                
+                html += `<td class="${cellClass}">${cellContent}</td>`;
+            });
+            html += `</tr>`;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+        
+        return html;
+    }
+
+    function isNumericComparisonField(header) {
+        const comparisonFields = ['actual', 'achievement', 'production', 'output', 'completed'];
+        return comparisonFields.some(field => header.includes(field));
+    }
+
+    function isStatusField(header) {
+        const statusFields = ['status', 'state', 'condition'];
+        return statusFields.some(field => header.includes(field));
+    }
+
+    function isNumericField(value) {
+        return !isNaN(parseFloat(value)) && isFinite(value);
+    }
+
+    function calculatePerformance(row, headers, actualIndex) {
+        // Look for plan/target column
+        const planIndex = headers.findIndex(h => 
+            h.toLowerCase().includes('plan') || 
+            h.toLowerCase().includes('target') || 
+            h.toLowerCase().includes('scheduled')
+        );
+        
+        if (planIndex === -1) return null;
+        
+        const actual = parseFloat(row[actualIndex]);
+        const plan = parseFloat(row[planIndex]);
+        
+        if (isNaN(actual) || isNaN(plan) || plan === 0) return null;
+        
+        const percentage = (actual / plan) * 100;
+        
+        let performanceClass, status;
+        if (percentage >= 110) {
+            performanceClass = 'performance-excellent';
+            status = 'Excellent';
+        } else if (percentage >= 90) {
+            performanceClass = 'performance-good';
+            status = 'Good';
+        } else if (percentage >= 70) {
+            performanceClass = 'performance-warning';
+            status = 'Warning';
+        } else {
+            performanceClass = 'performance-critical';
+            status = 'Critical';
+        }
+        
+        return {
+            class: performanceClass,
+            percentage: percentage.toFixed(1),
+            status: status
+        };
+    }
+
+    function formatPerformanceCell(value, performance) {
+        return `
+            <div class="${performance.class}">
+                ${formatNumber(value)}
+            </div>
+        `;
+    }
+
+    function formatStatusBadge(status) {
+        const statusLower = String(status).toLowerCase();
+        let badgeClass = 'status-badge';
+        
+        if (statusLower === 'received' || statusLower === 'completed' || statusLower === 'ok') {
+            badgeClass += ' status-received';
+        } else if (statusLower === 'pending' || statusLower === 'in progress') {
+            badgeClass += ' status-pending';
+        } else if (statusLower === 'scheduled' || statusLower === 'planned') {
+            badgeClass += ' status-scheduled';
+        } else if (statusLower === 'critical' || statusLower === 'urgent' || statusLower === 'delayed') {
+            badgeClass += ' status-critical';
+        }
+        
+        return `<span class="${badgeClass}">${status}</span>`;
+    }
+
+    function formatNumber(value) {
+        const num = parseFloat(value);
+        if (isNaN(num)) return value;
+        
+        // Format large numbers with commas
+        if (Math.abs(num) >= 1000) {
+            return num.toLocaleString();
+        }
+        
+        // Format decimals nicely
+        if (num % 1 !== 0) {
+            return num.toFixed(2);
+        }
+        
+        return num.toString();
+    }
+
+    function startStreaming() {
+        if (!currentBoard || !currentSection) {
+            showAlert('Please select a board and section first', 'warning');
+            return;
+        }
+
+        if (eventSource) {
+            eventSource.close();
+        }
+
+        const interval = parseInt(document.getElementById('refreshInterval').value);
+        
+        if (interval > 0) {
+            // Use Server-Sent Events for real-time updates
+            eventSource = new EventSource(`/planning/api/board/${currentBoard}/section/${currentSection}/stream/`);
+            
+            eventSource.onopen = function() {
+                updateConnectionStatus('connected');
+                isStreaming = true;
+                updateStreamingButtons();
+                showAlert('Live streaming started', 'info');
+            };
+            
+            eventSource.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                displaySectionData(data);
+                updateLastUpdate();
+                
+                // Highlight new data with animation
+                const tables = document.querySelectorAll('.table tbody tr');
+                tables.forEach(row => {
+                    row.classList.add('new-row');
+                    setTimeout(() => row.classList.remove('new-row'), 2000);
+                });
+            };
+            
+            eventSource.addEventListener('heartbeat', function(event) {
+                updateLastUpdate();
+            });
+            
+            eventSource.addEventListener('error', function(event) {
+                const data = JSON.parse(event.data);
+                console.error('SSE Error:', data.error);
+                showAlert(`Streaming error: ${data.error}`, 'error');
+            });
+            
+            eventSource.onerror = function() {
+                updateConnectionStatus('disconnected');
+                showAlert('Connection lost. Attempting to reconnect...', 'warning');
+                
+                // Attempt to reconnect after 5 seconds
+                setTimeout(() => {
+                    if (isStreaming) {
+                        startStreaming();
+                    }
+                }, 5000);
+            };
+        } else {
+            // Manual refresh mode
+            isStreaming = true;
+            updateConnectionStatus('connected');
+            updateStreamingButtons();
+            showAlert('Manual refresh mode activated', 'info');
+        }
+    }
+
+    function stopStreaming() {
+        if (eventSource) {
+            eventSource.close();
+            eventSource = null;
+        }
+        
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+            refreshInterval = null;
+        }
+        
+        isStreaming = false;
+        updateConnectionStatus('disconnected');
+        updateStreamingButtons();
+        showAlert('Live streaming stopped', 'info');
+    }
+
+    function restartStreaming() {
+        if (isStreaming) {
+            stopStreaming();
+            setTimeout(startStreaming, 500);
+        }
+    }
+
+    function refreshData() {
+        if (currentSection && currentBoard) {
+            const refreshBtn = document.getElementById('refreshBtn');
+            const fullscreenRefreshBtn = document.getElementById('fullscreenRefreshBtn');
+            
+            refreshBtn.classList.add('spinning');
+            fullscreenRefreshBtn.classList.add('spinning');
+            
+            loadSectionData(currentSection);
+            
+            setTimeout(() => {
+                refreshBtn.classList.remove('spinning');
+                fullscreenRefreshBtn.classList.remove('spinning');
+            }, 1000);
+        }
+    }
+
+    function triggerUpdate() {
+        if (!currentBoard) {
+            showAlert('Please select a board first', 'warning');
+            return;
+        }
+
+        fetch(`/planning/api/board/${currentBoard}/trigger-update/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': getCookie('csrftoken'),
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert('Board updated successfully', 'info');
+            } else {
+                showAlert('Failed to update board', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error triggering update:', error);
+            showAlert('Error triggering update', 'error');
+        });
+    }
+
+    function updateConnectionStatus(status) {
+        const indicator = document.getElementById('connectionIndicator');
+        const statusText = document.getElementById('connectionStatus');
+        const sectionStatus = document.getElementById('sectionConnectionStatus');
+        const fullscreenStatus = document.getElementById('fullscreenConnectionStatus');
+        
+        indicator.className = 'status-indicator';
+        statusText.className = 'connection-status';
+        sectionStatus.className = 'connection-status';
+        fullscreenStatus.className = 'connection-status';
+        
+        if (status === 'connected') {
+            indicator.classList.add('connected');
+            statusText.classList.add('connected');
+            sectionStatus.classList.add('connected');
+            fullscreenStatus.classList.add('connected');
+            statusText.innerHTML = '<span>Connected</span>';
+            sectionStatus.innerHTML = '<span>Live</span>';
+            fullscreenStatus.innerHTML = '<span>Live</span>';
+        } else if (status === 'connecting') {
+            statusText.classList.add('connecting');
+            sectionStatus.classList.add('connecting');
+            fullscreenStatus.classList.add('connecting');
+            statusText.innerHTML = '<span>Connecting...</span>';
+            sectionStatus.innerHTML = '<span>Connecting...</span>';
+            fullscreenStatus.innerHTML = '<span>Connecting...</span>';
+        } else {
+            indicator.classList.add('disconnected');
+            statusText.classList.add('disconnected');
+            sectionStatus.classList.add('disconnected');
+            fullscreenStatus.classList.add('disconnected');
+            statusText.innerHTML = '<span>Disconnected</span>';
+            sectionStatus.innerHTML = '<span>Disconnected</span>';
+            fullscreenStatus.innerHTML = '<span>Disconnected</span>';
+        }
+    }
+
+    function updateStreamingButtons() {
+        const startBtn = document.getElementById('startStreamBtn');
+        const stopBtn = document.getElementById('stopStreamBtn');
+        
+        if (isStreaming) {
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+        } else {
+            startBtn.disabled = !currentBoard;
+            stopBtn.disabled = true;
+        }
+    }
+
+    function updateLastUpdate() {
+        const now = new Date();
+        document.getElementById('lastUpdate').textContent = now.toLocaleTimeString();
+    }
+
+    function showLoading() {
+        const loadingHtml = `
+            <div class="loading">
+                <div class="loading-spinner"></div>
+                <p>Loading data...</p>
+            </div>
+        `;
+        document.getElementById('dataContent').innerHTML = loadingHtml;
+        
+        if (isFullscreen) {
+            document.getElementById('fullscreenDataContent').innerHTML = loadingHtml;
+        }
+    }
+
+    function showError(message) {
+        const errorHtml = `
+            <div class="error-state">
+                <div class="error-icon">❌</div>
+                <h3>Error</h3>
+                <p>${message}</p>
+            </div>
+        `;
+        document.getElementById('dataContent').innerHTML = errorHtml;
+        
+        if (isFullscreen) {
+            document.getElementById('fullscreenDataContent').innerHTML = errorHtml;
+        }
+    }
+
+    function showAlert(message, type = 'info') {
+        const alertArea = document.getElementById('alertArea');
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type}`;
+        alertDiv.textContent = message;
+        
+        alertArea.appendChild(alertDiv);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.parentNode.removeChild(alertDiv);
+            }
+        }, 5000);
+    }
+
+    function formatTimeAgo(dateString) {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now - date;
+        const diffMins = Math.floor(diffMs / 60000);
+        
+        if (diffMins < 1) return 'Just now';
+        if (diffMins < 60) return `${diffMins} min ago`;
+        
+        const diffHours = Math.floor(diffMins / 60);
+        if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+        
+        const diffDays = Math.floor(diffHours / 24);
+        return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', function() {
+        if (eventSource) {
+            eventSource.close();
+        }
+        if (refreshInterval) {
+            clearInterval(refreshInterval);
+        }
+
+    });
+
+    setInterval(refreshData, 30000);
+
+</script>
+{% endblock %}

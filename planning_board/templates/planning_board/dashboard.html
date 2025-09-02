@@ -114,6 +114,7 @@
     .filter-section {
         padding: var(--spacing-xl);
         margin-bottom: var(--spacing-xl);
+        position: relative;
     }
 
     .filter-title {
@@ -166,6 +167,10 @@
         border-color: var(--gray-400);
     }
 
+    .form-control.error {
+        border-color: var(--error);
+    }
+
     /* Buttons */
     .btn {
         padding: 0.75rem 1.25rem;
@@ -183,6 +188,12 @@
         white-space: nowrap;
         position: relative;
         overflow: hidden;
+        min-width: 100px;
+    }
+
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
     }
 
     .btn::before {
@@ -206,7 +217,7 @@
         box-shadow: var(--shadow-sm);
     }
 
-    .btn-primary:hover {
+    .btn-primary:hover:not(:disabled) {
         transform: translateY(-1px);
         box-shadow: var(--shadow-md);
         color: white;
@@ -219,7 +230,7 @@
         box-shadow: var(--shadow-sm);
     }
 
-    .btn-secondary:hover {
+    .btn-secondary:hover:not(:disabled) {
         transform: translateY(-1px);
         box-shadow: var(--shadow-md);
         color: white;
@@ -233,7 +244,7 @@
         box-shadow: var(--shadow-sm);
     }
 
-    .btn-outline-primary:hover {
+    .btn-outline-primary:hover:not(:disabled) {
         background: var(--primary);
         color: white;
         transform: translateY(-1px);
@@ -248,12 +259,33 @@
         box-shadow: var(--shadow-sm);
     }
 
-    .btn-outline-secondary:hover {
+    .btn-outline-secondary:hover:not(:disabled) {
         background: var(--secondary);
         color: white;
         transform: translateY(-1px);
         box-shadow: var(--shadow-md);
         text-decoration: none;
+    }
+
+    /* Loading state */
+    .btn.loading {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+
+    .btn.loading::after {
+        content: '';
+        width: 14px;
+        height: 14px;
+        border: 2px solid currentColor;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-left: 8px;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
     }
 
     /* Stats Grid */
@@ -312,34 +344,6 @@
         margin-bottom: var(--spacing-md);
         opacity: 0.8;
         display: block;
-    }
-
-    .stat-card.primary .stat-icon {
-        background: linear-gradient(135deg, var(--primary), var(--primary-hover));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    .stat-card.success .stat-icon {
-        background: linear-gradient(135deg, var(--success), #059669);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    .stat-card.info .stat-icon {
-        background: linear-gradient(135deg, var(--info), #0891b2);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-    }
-
-    .stat-card.warning .stat-icon {
-        background: linear-gradient(135deg, var(--warning), #d97706);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
     }
 
     .stat-number {
@@ -423,13 +427,13 @@
 
     .table tbody tr:hover {
         background: var(--gray-50);
-        transform: scale(1.001);
     }
 
     .table .btn {
         padding: 0.5rem 0.75rem;
         font-size: 0.75rem;
         margin-right: var(--spacing-xs);
+        min-width: auto;
     }
 
     /* Empty State */
@@ -460,28 +464,38 @@
         margin-right: auto;
     }
 
-    /* Icons */
-    .icon {
-        width: 16px;
-        height: 16px;
-        display: inline-block;
-    }
-
-    .icon-filter::before { content: "🔍"; }
-    .icon-clipboard::before { content: "📋"; }
-    .icon-factory::before { content: "🏭"; }
-    .icon-clock::before { content: "🕐"; }
-    .icon-plus::before { content: "➕"; }
-    .icon-eye::before { content: "👁"; }
-    .icon-edit::before { content: "✏️"; }
-    .icon-upload::before { content: "📤"; }
-    .icon-calendar::before { content: "📅"; }
-
     /* Filter Actions */
     .filter-actions {
         display: flex;
         gap: var(--spacing-sm);
         flex-wrap: wrap;
+    }
+
+    /* Filter status indicator */
+    .filter-status {
+        display: flex;
+        align-items: center;
+        gap: var(--spacing-sm);
+        padding: var(--spacing-sm);
+        background: var(--primary-light);
+        border-radius: var(--radius-md);
+        font-size: 0.875rem;
+        margin-bottom: var(--spacing-md);
+    }
+
+    .filter-status.active {
+        display: flex;
+    }
+
+    .filter-status.inactive {
+        display: none;
+    }
+
+    /* Validation errors */
+    .error-message {
+        color: var(--error);
+        font-size: 0.75rem;
+        margin-top: var(--spacing-xs);
     }
 
     /* Responsive Design */
@@ -545,43 +559,6 @@
             padding: var(--spacing-lg);
         }
     }
-
-    /* Loading Animation */
-    @keyframes shimmer {
-        0% { opacity: 1; }
-        50% { opacity: 0.5; }
-        100% { opacity: 1; }
-    }
-
-    .loading {
-        animation: shimmer 1.5s ease-in-out infinite;
-    }
-
-    /* Focus Styles for Accessibility */
-    .btn:focus,
-    .form-control:focus {
-        outline: 2px solid var(--primary);
-        outline-offset: 2px;
-    }
-
-    /* Print Styles */
-    @media print {
-        .filter-section,
-        .quick-actions,
-        .btn {
-            display: none !important;
-        }
-        
-        .dashboard-header {
-            background: none !important;
-            color: black !important;
-        }
-        
-        .card {
-            box-shadow: none !important;
-            border: 1px solid #ccc !important;
-        }
-    }
 </style>
 {% endblock %}
 
@@ -591,43 +568,80 @@
     <div class="dashboard-header">
         <h1>FCC Manesar Production Planning Dashboard</h1>
         <p>Manage and monitor your production planning boards efficiently</p>
+        <br>
+        <a href="{% url 'planning_board:live_view' %}" class="btn btn-outline-primary">
+            🔴 Live View
+        </a>
     </div>
 
     <!-- Filter Section -->
     <div class="filter-section card">
         <div class="filter-title">
-            <span class="icon icon-filter"></span>
-            Filter Planning Boards
+            🔍 Filter Planning Boards
         </div>
+        
+        <!-- Filter Status Indicator -->
+        <div class="filter-status {% if filters_applied %}active{% else %}inactive{% endif %}">
+            <span>📊 Filters Applied:</span>
+            <span id="filterSummary">
+                {% if filter_date_from %}From: {{ filter_date_from }}{% endif %}
+                {% if filter_date_to %}To: {{ filter_date_to }}{% endif %}
+                {% if filter_status %}Status: {{ filter_status|title }}{% endif %}
+                ({{ filtered_count }} results)
+            </span>
+        </div>
+
         <form id="filterForm" method="GET" action="{% url 'planning_board:dashboard' %}">
             <div class="filter-controls">
                 <div class="form-group">
                     <label for="dateFrom">From Date</label>
-                    <input type="date" id="dateFrom" name="date_from" class="form-control" 
-                           value="{{ filter_date_from }}" onchange="applyFilters()">
+                    <input type="date" 
+                           id="dateFrom" 
+                           name="date_from" 
+                           class="form-control {% if not date_range_valid %}error{% endif %}" 
+                           value="{{ filter_date_from }}"
+                           max="{{ today_date }}">
+                    {% if not date_range_valid %}
+                        <div class="error-message">Invalid date range</div>
+                    {% endif %}
                 </div>
+                
                 <div class="form-group">
                     <label for="dateTo">To Date</label>
-                    <input type="date" id="dateTo" name="date_to" class="form-control" 
-                           value="{{ filter_date_to }}" onchange="applyFilters()">
+                    <input type="date" 
+                           id="dateTo" 
+                           name="date_to" 
+                           class="form-control {% if not date_range_valid %}error{% endif %}" 
+                           value="{{ filter_date_to }}"
+                           max="{{ today_date }}">
                 </div>
+                
                 <div class="form-group">
-                    <label for="statusFilter">Status</label>
-                    <select id="statusFilter" name="status" class="form-control" onchange="applyFilters()">
-                        <option value="">All Status</option>
-                        <option value="recent" {% if filter_status == 'recent' %}selected{% endif %}>Recent</option>
+                    <label for="statusFilter">Quick Filter</label>
+                    <select id="statusFilter" name="status" class="form-control">
+                        <option value="">All Boards</option>
                         <option value="today" {% if filter_status == 'today' %}selected{% endif %}>Today</option>
+                        <option value="recent" {% if filter_status == 'recent' %}selected{% endif %}>Last 3 Days</option>
                         <option value="this_week" {% if filter_status == 'this_week' %}selected{% endif %}>This Week</option>
                         <option value="this_month" {% if filter_status == 'this_month' %}selected{% endif %}>This Month</option>
                     </select>
                 </div>
+                
                 <div class="form-group">
                     <label>&nbsp;</label>
                     <div class="filter-actions">
-                        <button type="button" class="btn btn-secondary" onclick="clearFilters()">Clear</button>
-                        <button type="button" class="btn btn-primary" onclick="setTodayFilter()">Today</button>
-                        <button type="button" class="btn btn-outline-primary" onclick="filterThisWeek()">This Week</button>
-                        <button type="submit" class="btn btn-primary">Apply Filter</button>
+                        <button type="button" class="btn btn-secondary" onclick="clearAllFilters()">
+                            🔄 Clear
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="setQuickFilter('today')">
+                            📅 Today
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" onclick="setQuickFilter('this_week')">
+                            📊 This Week
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="applyFilterBtn">
+                            ✅ Apply
+                        </button>
                     </div>
                 </div>
             </div>
@@ -637,22 +651,22 @@
     <!-- Statistics -->
     <div class="stats-grid">
         <div class="stat-card primary">
-            <div class="stat-icon icon-clipboard"></div>
+            <div class="stat-icon">📋</div>
             <span class="stat-number">{{ total_boards }}</span>
             <div class="stat-label">Total Planning Boards</div>
         </div>
         <div class="stat-card success">
-            <div class="stat-icon icon-factory"></div>
+            <div class="stat-icon">🏭</div>
             <span class="stat-number">{{ total_production_lines }}</span>
             <div class="stat-label">Production Lines</div>
         </div>
         <div class="stat-card info">
-            <div class="stat-icon icon-clock"></div>
-            <span class="stat-number">{{ filtered_boards.count }}</span>
+            <div class="stat-icon">🔍</div>
+            <span class="stat-number">{{ filtered_count }}</span>
             <div class="stat-label">Filtered Results</div>
         </div>
         <div class="stat-card warning">
-            <div class="stat-icon icon-calendar"></div>
+            <div class="stat-icon">📅</div>
             <span class="stat-number">{{ today_boards_count|default:0 }}</span>
             <div class="stat-label">Today's Boards</div>
         </div>
@@ -664,10 +678,8 @@
             <h2 class="section-title">Planning Boards</h2>
             <div class="quick-actions">
                 <a href="{% url 'planning_board:excel_upload' %}" class="btn btn-outline-secondary">
-                    <span class="icon icon-upload"></span>
-                    Upload Excel
+                    📤 Upload Excel
                 </a>
-        
             </div>
         </div>
 
@@ -685,7 +697,7 @@
                                 <th>Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="boardsTableBody">
                             {% for board in filtered_boards %}
                             <tr>
                                 <td>{{ board.today_date }}</td>
@@ -694,10 +706,8 @@
                                 <td>{{ board.created_at|date:"M d, Y H:i" }}</td>
                                 <td>
                                     <a href="{% url 'planning_board:detail' board.pk %}" class="btn btn-outline-primary">
-                                        <span class="icon icon-eye"></span>
-                                        View
+                                        👁 View
                                     </a>
-                          
                                 </td>
                             </tr>
                             {% endfor %}
@@ -710,15 +720,17 @@
                     <div class="empty-state-icon">📋</div>
                     <h3>No Planning Boards Found</h3>
                     <p>
-                        {% if filter_date_from or filter_date_to or filter_status %}
+                        {% if filters_applied %}
                             No planning boards match your current filter criteria. Try adjusting your filters or create a new planning board.
                         {% else %}
                             No planning boards found. Get started by creating your first planning board or uploading an Excel file.
                         {% endif %}
                     </p>
                     <div style="display: flex; gap: var(--spacing-md); justify-content: center; flex-wrap: wrap;">
-                        <a href="{% url 'planning_board:create' %}" class="btn btn-primary">Create your first one</a>
-                        <a href="{% url 'planning_board:excel_upload' %}" class="btn btn-outline-secondary">Upload an Excel file</a>
+                        {% if filters_applied %}
+                            <button onclick="clearAllFilters()" class="btn btn-secondary">Clear Filters</button>
+                        {% endif %}
+                        <a href="{% url 'planning_board:excel_upload' %}" class="btn btn-outline-secondary">📤 Upload Excel File</a>
                     </div>
                 </div>
             {% endif %}
@@ -727,86 +739,205 @@
 </div>
 
 <script>
+    // Global variables
+    let isLoading = false;
+    const today = '{{ today_date }}';
+    const weekStart = '{{ week_start_date }}';
+    const monthStart = '{{ month_start_date }}';
+
     // Initialize dashboard
     document.addEventListener('DOMContentLoaded', function() {
-        // Check if we need to set default filters
-        const urlParams = new URLSearchParams(window.location.search);
-        const hasFilters = urlParams.has('date_from') || urlParams.has('date_to') || urlParams.has('status');
+        console.log('Dashboard initialized');
         
-        // If no filters are present in URL, set today's filter
-        if (!hasFilters) {
-            setTodayFilter();
+        // Set up event listeners
+        setupEventListeners();
+        
+        // Set max dates for date inputs
+        document.getElementById('dateFrom').setAttribute('max', today);
+        document.getElementById('dateTo').setAttribute('max', today);
+        
+        // Validate initial state
+        validateDateRange();
+        
+        // Auto-apply filters on input change with debouncing
+        const dateFromInput = document.getElementById('dateFrom');
+        const dateToInput = document.getElementById('dateTo');
+        const statusInput = document.getElementById('statusFilter');
+        
+        if (dateFromInput) {
+            dateFromInput.addEventListener('change', debounce(validateAndApplyFilters, 500));
         }
+        
+        if (dateToInput) {
+            dateToInput.addEventListener('change', debounce(validateAndApplyFilters, 500));
+        }
+        
+        if (statusInput) {
+            statusInput.addEventListener('change', handleStatusChange);
+        }
+    });
 
-        // Add loading states for better UX
+    function setupEventListeners() {
         const form = document.getElementById('filterForm');
         if (form) {
-            form.addEventListener('submit', function() {
-                const submitBtn = form.querySelector('button[type="submit"]');
-                if (submitBtn) {
-                    submitBtn.classList.add('loading');
-                    submitBtn.textContent = 'Applying...';
-                }
-            });
+            form.addEventListener('submit', handleFormSubmit);
         }
-    });
+    }
 
-    // Apply filters function - submits the form
+    function handleFormSubmit(e) {
+        e.preventDefault();
+        
+        if (isLoading) {
+            return false;
+        }
+        
+        if (!validateDateRange()) {
+            alert('Please check your date range. "From Date" cannot be later than "To Date".');
+            return false;
+        }
+        
+        applyFilters();
+        return false;
+    }
+
+    function handleStatusChange() {
+        const statusValue = document.getElementById('statusFilter').value;
+        
+        // Auto-set appropriate date ranges based on status
+        if (statusValue) {
+            setQuickFilter(statusValue);
+        }
+    }
+
+    function validateDateRange() {
+        const dateFrom = document.getElementById('dateFrom').value;
+        const dateTo = document.getElementById('dateTo').value;
+        
+        if (dateFrom && dateTo) {
+            const fromDate = new Date(dateFrom);
+            const toDate = new Date(dateTo);
+            
+            if (fromDate > toDate) {
+                // Add error styling
+                document.getElementById('dateFrom').classList.add('error');
+                document.getElementById('dateTo').classList.add('error');
+                return false;
+            } else {
+                // Remove error styling
+                document.getElementById('dateFrom').classList.remove('error');
+                document.getElementById('dateTo').classList.remove('error');
+                return true;
+            }
+        }
+        
+        return true;
+    }
+
+    function validateAndApplyFilters() {
+        if (validateDateRange()) {
+            applyFilters();
+        }
+    }
+
     function applyFilters() {
-        document.getElementById('filterForm').submit();
-    }
-
-    // Set today's date as default filter
-    function setTodayFilter() {
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('dateFrom').value = today;
-        document.getElementById('dateTo').value = today;
-        document.getElementById('statusFilter').value = 'today';
+        if (isLoading) return;
         
-        // Submit the form automatically
-        applyFilters();
-    }
-
-    // Clear all filters
-    function clearFilters() {
-        // Redirect to dashboard without any parameters
-        window.location.href = "{% url 'planning_board:dashboard' %}";
-    }
-
-    // Quick filter functions
-    function filterToday() {
-        setTodayFilter();
-    }
-
-    function filterThisWeek() {
-        const today = new Date();
-        const weekStart = new Date(today);
-        weekStart.setDate(today.getDate() - today.getDay());
+        console.log('Applying filters...');
+        setLoadingState(true);
         
-        document.getElementById('dateFrom').value = weekStart.toISOString().split('T')[0];
-        document.getElementById('dateTo').value = today.toISOString().split('T')[0];
-        document.getElementById('statusFilter').value = 'this_week';
+        const form = document.getElementById('filterForm');
+        const formData = new FormData(form);
         
-        applyFilters();
+        // Build URL with parameters
+        const params = new URLSearchParams();
+        
+        const dateFrom = formData.get('date_from');
+        const dateTo = formData.get('date_to');
+        const status = formData.get('status');
+        
+        if (dateFrom) params.append('date_from', dateFrom);
+        if (dateTo) params.append('date_to', dateTo);
+        if (status) params.append('status', status);
+        
+        // Navigate to new URL with filters
+        const newUrl = window.location.pathname + '?' + params.toString();
+        window.location.href = newUrl;
     }
 
-    function filterThisMonth() {
-        const today = new Date();
-        const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+    function setQuickFilter(filterType) {
+        const dateFromInput = document.getElementById('dateFrom');
+        const dateToInput = document.getElementById('dateTo');
+        const statusInput = document.getElementById('statusFilter');
         
-        document.getElementById('dateFrom').value = monthStart.toISOString().split('T')[0];
-        document.getElementById('dateTo').value = today.toISOString().split('T')[0];
-        document.getElementById('statusFilter').value = 'this_month';
+        console.log('Setting quick filter:', filterType);
         
-        applyFilters();
+        switch(filterType) {
+            case 'today':
+                dateFromInput.value = today;
+                dateToInput.value = today;
+                statusInput.value = 'today';
+                break;
+                
+            case 'recent':
+                // Last 3 days
+                const threeDaysAgo = new Date();
+                threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+                dateFromInput.value = threeDaysAgo.toISOString().split('T')[0];
+                dateToInput.value = today;
+                statusInput.value = 'recent';
+                break;
+                
+            case 'this_week':
+                dateFromInput.value = weekStart;
+                dateToInput.value = today;
+                statusInput.value = 'this_week';
+                break;
+                
+            case 'this_month':
+                dateFromInput.value = monthStart;
+                dateToInput.value = today;
+                statusInput.value = 'this_month';
+                break;
+        }
+        
+        // Apply filters after setting values
+        setTimeout(() => {
+            applyFilters();
+        }, 100);
     }
 
-    // Enhanced error handling
-    window.addEventListener('error', function(e) {
-        console.error('Dashboard error:', e.error);
-    });
+    function clearAllFilters() {
+        console.log('Clearing all filters');
+        
+        // Clear form inputs
+        document.getElementById('dateFrom').value = '';
+        document.getElementById('dateTo').value = '';
+        document.getElementById('statusFilter').value = '';
+        
+        // Remove error styling
+        document.getElementById('dateFrom').classList.remove('error');
+        document.getElementById('dateTo').classList.remove('error');
+        
+        // Navigate to clean URL
+        window.location.href = window.location.pathname;
+    }
 
-    // Performance optimization - debounce form changes
+    function setLoadingState(loading) {
+        isLoading = loading;
+        const submitBtn = document.getElementById('applyFilterBtn');
+        
+        if (loading) {
+            submitBtn.classList.add('loading');
+            submitBtn.textContent = 'Applying...';
+            submitBtn.disabled = true;
+        } else {
+            submitBtn.classList.remove('loading');
+            submitBtn.textContent = '✅ Apply';
+            submitBtn.disabled = false;
+        }
+    }
+
+    // Utility function for debouncing
     function debounce(func, wait) {
         let timeout;
         return function executedFunction(...args) {
@@ -819,8 +950,60 @@
         };
     }
 
-    // Debounced filter application for better performance
-    const debouncedApplyFilters = debounce(applyFilters, 300);
+    // Enhanced error handling
+    window.addEventListener('error', function(e) {
+        console.error('Dashboard error:', e.error);
+        setLoadingState(false);
+    });
+
+    // Handle browser back/forward buttons
+    window.addEventListener('popstate', function(e) {
+        console.log('Browser navigation detected, reloading...');
+        window.location.reload();
+    });
+
+    // Auto-refresh functionality (optional)
+    function setupAutoRefresh() {
+        // Auto-refresh every 5 minutes if no filters are applied
+        const urlParams = new URLSearchParams(window.location.search);
+        if (!urlParams.has('date_from') && !urlParams.has('date_to') && !urlParams.has('status')) {
+            setInterval(() => {
+                console.log('Auto-refreshing dashboard...');
+                window.location.reload();
+            }, 5 * 60 * 1000); // 5 minutes
+        }
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + Enter to apply filters
+        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+            e.preventDefault();
+            applyFilters();
+        }
+        
+        // Escape to clear filters
+        if (e.key === 'Escape') {
+            clearAllFilters();
+        }
+        
+        // Ctrl/Cmd + T for today's filter
+        if ((e.ctrlKey || e.metaKey) && e.key === 't') {
+            e.preventDefault();
+            setQuickFilter('today');
+        }
+    });
+
+    // Export functionality for debugging
+    window.dashboardDebug = {
+        applyFilters,
+        clearAllFilters,
+        setQuickFilter,
+        validateDateRange,
+        setLoadingState
+    };
+
+    console.log('Dashboard script loaded successfully');
 </script>
 
 {% endblock %}
