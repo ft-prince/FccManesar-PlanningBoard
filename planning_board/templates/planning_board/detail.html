@@ -40,8 +40,9 @@
 
     .board-header {
         background: linear-gradient(135deg, var(--industrial-blue), #1d4ed8);
-        color: white;
-        padding: 20px;
+         padding: 20px;
+         color: #fcba84ff; /* Tailwind orange-400 */
+
         text-align: center;
         position: relative;
     }
@@ -698,7 +699,7 @@
     <!-- Today Assembly Plan (Production Lines) -->
     <div class="section-container">
         <h2 class="section-header">
-            <span><i class="fas fa-industry"></i> Today Assembly Plan</span>
+            <span><i class="fas fa-industry"></i> Today Assembly Plan  (A SHIFT TIMING  6:00 AM TO 2:30 PM) --- (B SHIFT TIMING 2:30 PM  TO 11:00 PM) --- (C SHIFT TIMING SHIFT TIMING 11:00PM TO 6:00 AM) </span>
             <div class="section-controls">
                 <button class="add-row-btn" onclick="addProductionLineRow()" style="display: none;">
                     <i class="fas fa-plus"></i> Add Line
@@ -750,14 +751,14 @@
                                 <td><div class="editable-field qty-value" data-field="a_shift_plan" data-type="number">{{ line.a_shift_plan|default:"-" }}</div></td>
                                 <td><div class="editable-field qty-value" data-field="a_shift_actual" data-type="number">{{ line.a_shift_actual|default:"-" }}</div></td>
                                 <td><div class="editable-field qty-value" data-field="a_shift_plan_change" data-type="number">{{ line.a_shift_plan_change|default:"-" }}</div></td>
-                                <td><div class="editable-field" data-field="a_shift_time" data-type="time" data-value="{{ line.a_shift_time|time:'H:i' }}">{{ line.a_shift_time|time:"H:i"|default:"-" }}</div></td>
+                                <td>6:00 AM TO 2:30</td>
                                 <td style="text-align: left;"><div class="editable-field" data-field="a_shift_remarks" data-type="textarea">{{ line.a_shift_remarks|default:"-" }}</div></td>
                                 <!-- B Shift Data -->
                                 <td><div class="editable-field" data-field="b_shift_model" data-type="text">{{ line.b_shift_model|default:"-" }}</div></td>
                                 <td><div class="editable-field qty-value" data-field="b_shift_plan" data-type="number">{{ line.b_shift_plan|default:"-" }}</div></td>
                                 <td><div class="editable-field qty-value" data-field="b_shift_actual" data-type="number">{{ line.b_shift_actual|default:"-" }}</div></td>
                                 <td><div class="editable-field qty-value" data-field="b_shift_plan_change" data-type="number">{{ line.b_shift_plan_change|default:"-" }}</div></td>
-                                <td><div class="editable-field" data-field="b_shift_time" data-type="time" data-value="{{ line.b_shift_time|time:'H:i' }}">{{ line.b_shift_time|time:"H:i"|default:"-" }}</div></td>
+                                <td> 2:30 PM  TO 11:00 PM</td>
                                 <td style="text-align: left;"><div class="editable-field" data-field="b_shift_remarks" data-type="textarea">{{ line.b_shift_remarks|default:"-" }}</div></td>
                                 <!-- C Shift Data -->
                                 <td><div class="editable-field" data-field="c_shift_model" data-type="text">{{ line.c_shift_model|default:"-" }}</div></td>

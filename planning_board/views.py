@@ -242,10 +242,10 @@ def extract_production_lines(worksheet, board):
     try:
         # Define production lines and their starting row positions
         line_configs = [
-            {'name': 'PULLEY ASSY LINE-1', 'start_row': 7, 'max_rows': 3},    # 3 items
-            {'name': 'CLUTCH ASSY LINE-3', 'start_row': 10, 'max_rows': 16},  # 17 items
-            {'name': 'CLUTCH ASSY LINE-2', 'start_row': 26, 'max_rows': 17},  # 16 items
-            {'name': 'FMD/FFD', 'start_row': 43, 'max_rows': 4},              # 3 items
+            {'name': 'PULLEY ASSY LINE-1', 'start_row': 7, 'max_rows': 4},    # 4 items
+            {'name': 'CLUTCH ASSY LINE-2', 'start_row': 11, 'max_rows': 17},  # 17 items
+            {'name': 'CLUTCH ASSY LINE-3', 'start_row': 28, 'max_rows': 16},  # 16 items
+            {'name': 'FMD/FFD', 'start_row': 44, 'max_rows': 3},              # 3 items
         ]
 
         
@@ -430,7 +430,7 @@ def extract_future_plans_fixed(worksheet, board):
             'c_shift_col': 24,   # Column W - TOMORROW C SHIFT
             'remarks_col': 25,   # Column X - TOMORROW REMARKS
             'start_row': 7,      # Data starts at row 7
-            'end_row': 46        # Data ends at row 30
+            'end_row': 47        # Data ends at row 46
         }
         
         # NEXT DAY PLAN COLUMNS (typically starts around column Y/Z)
@@ -441,7 +441,7 @@ def extract_future_plans_fixed(worksheet, board):
             'c_shift_col': 29,   # Column AB - NEXT DAY C SHIFT
             'remarks_col': 30,   # Column AC - NEXT DAY REMARKS
             'start_row': 7,      # Data starts at row 7
-            'end_row': 46        # Data ends at row 30
+            'end_row': 47        # Data ends at row 30
         }
         
         print("Extracting TOMORROW plans with config:", tomorrow_config)
@@ -863,15 +863,9 @@ def ajax_add_production_line(request):
     
     return JsonResponse({'error': 'Invalid request'})
 
-from django.shortcuts import render, redirect
-from django.contrib.auth.decorators import login_required
-from django.utils import timezone
-from django.db.models import Q
-from datetime import datetime, timedelta
-from django.contrib import messages
-import logging
 
-logger = logging.getLogger(__name__)
+
+
 
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
@@ -1684,7 +1678,7 @@ def get_section_data(request, board_id, section):
     }
     
     if section == 'today_assembly':
-        production_lines = board.production_lines.all().order_by('line_number')
+        production_lines = board.production_lines.all()
         data['title'] = 'Today Assembly Plan  (A SHIFT TIMING  6:00 AM TO 2:30 PM) --- (B SHIFT TIMING 2:30 PM  TO 11:00 PM) --- (C SHIFT TIMING SHIFT TIMING 11:00PM TO 6:00 AM)'
         data['headers'] = [
             'Line No.', 'A Shift Model', 'A Plan', 'A Actual', 'A Change', 'A Time',
@@ -1699,21 +1693,24 @@ def get_section_data(request, board_id, section):
                 line.a_shift_plan or 0,
                 line.a_shift_actual or 0,
                 line.a_shift_plan_change or 0,
+                line.a_shift_remarks or '',
                 str(line.a_shift_time) if line.a_shift_time else '6:00 AM TO 2:30 PM',
                 line.b_shift_model or '',
                 line.b_shift_plan or 0,
                 line.b_shift_actual or 0,
                 line.b_shift_plan_change or 0,
+                line.b_shift_remarks or '',
                 str(line.b_shift_time) if line.b_shift_time else '2:30 PM  TO 11:00 PM',
                 line.c_shift_model or '',
                 line.c_shift_plan or 0,
                 line.c_shift_actual or 0,
                 line.c_shift_plan_change or 0,
-                ( '11:00PM TO 6:00 AM')[:100]
+                line.c_shift_remarks or '',
+                ( '11:00PM TO 6:00 AM')[:100],
             ])
     
     elif section == 'tomorrow_assembly':
-        tomorrow_plans = board.tomorrow_plans.all().order_by('model')
+        tomorrow_plans = board.tomorrow_plans.all()
         data['title'] = 'Tomorrow Assembly Plan'
         data['headers'] = ['Model', 'A Shift', 'B Shift', 'C Shift', 'Total', 'Remarks']
         
@@ -1809,6 +1806,9 @@ def get_section_data(request, board_id, section):
             ])
     
     return JsonResponse(data)
+   
+
+
 
 @login_required
 @never_cache
@@ -1895,10 +1895,6 @@ def trigger_board_update(request, board_id):
 #  new for rendering the new page
 
 
- 
-
-
-# Add these views to your existing views.py file
 
 @login_required
 def fullscreen_display(request, board_id, section):
@@ -2340,3 +2336,352 @@ def calculate_efficiency(plan, actual):
     if not plan or plan == 0:
         return 0
     return round((actual or 0) / plan * 100, 1)
+
+
+
+
+
+
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.http import JsonResponse, StreamingHttpResponse
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.cache import never_cache
+from django.contrib import messages
+from django.utils import timezone
+from django.core.cache import cache
+import json
+import time
+import logging
+
+logger = logging.getLogger(__name__)
+
+@login_required
+def monitor_display(request):
+    """
+    Fullscreen monitor display page - this goes on the production monitor
+    """
+    context = {
+        'page_title': 'Production Monitor Display',
+        'auto_start': True,
+        'current_time': timezone.now(),
+    }
+    return render(request, 'planning_board/monitor_display.html', context)
+
+@login_required
+def monitor_controller(request):
+    """
+    Controller interface - this is what you use on your computer to control the monitor
+    """
+    context = {
+        'page_title': 'Monitor Controller',
+        'current_time': timezone.now(),
+    }
+    return render(request, 'planning_board/monitor_controller.html', context)
+
+@csrf_exempt
+@login_required
+def monitor_control_api(request):
+    """
+    API endpoint for controlling the monitor display
+    """
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            action = data.get('action')
+            
+            # Store control commands in cache for the monitor to pick up
+            control_key = f"monitor_control_{request.user.id}"
+            
+            command = {
+                'action': action,
+                'timestamp': timezone.now().isoformat(),
+                'user_id': request.user.id,
+            }
+            
+            if action == 'change_display':
+                command.update({
+                    'board_id': data.get('board_id'),
+                    'section': data.get('section'),
+                })
+                
+                # Also store current display state
+                display_state = {
+                    'board_id': data.get('board_id'),
+                    'section': data.get('section'),
+                    'updated_at': timezone.now().isoformat(),
+                    'updated_by': request.user.username,
+                }
+                cache.set(f"monitor_display_state_{request.user.id}", display_state, 3600)
+                
+            elif action == 'show_message':
+                command.update({
+                    'message': data.get('message'),
+                    'type': data.get('type', 'info'),
+                })
+                
+            elif action == 'update_config':
+                command.update({
+                    'config': data.get('config', {}),
+                })
+            
+            # Store the command for the monitor to pick up
+            cache.set(control_key, command, 300)  # 5 minute expiry
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Command {action} sent successfully',
+                'timestamp': timezone.now().isoformat()
+            })
+            
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON'}, status=400)
+        except Exception as e:
+            logger.error(f"Monitor control error: {str(e)}")
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+    elif request.method == 'GET':
+        # Return any pending commands for the monitor
+        control_key = f"monitor_control_{request.user.id}"
+        command = cache.get(control_key)
+        
+        if command:
+            # Clear the command after retrieving it
+            cache.delete(control_key)
+            return JsonResponse({'command': command})
+        else:
+            return JsonResponse({'command': None})
+    
+    return JsonResponse({'success': False, 'error': 'Method not allowed'}, status=405)
+
+@login_required
+def monitor_status_api(request):
+    """
+    API endpoint to get current monitor status
+    """
+    try:
+        display_state = cache.get(f"monitor_display_state_{request.user.id}", {})
+        
+        # Get current board info if available
+        current_board = None
+        current_section = None
+        data_rows = 0
+        
+        if display_state.get('board_id'):
+            try:
+                board = PlanningBoard.objects.get(
+                    pk=display_state['board_id'], 
+                    created_by=request.user
+                )
+                current_board = f"{board.title} - {board.today_date}"
+                current_section = display_state.get('section', '').replace('_', ' ').title()
+                
+                # Get data count for current section
+                if display_state.get('section') == 'today_assembly':
+                    data_rows = board.production_lines.count()
+                elif display_state.get('section') == 'tomorrow_assembly':
+                    data_rows = board.tomorrow_plans.count()
+                elif display_state.get('section') == 'next_day_assembly':
+                    data_rows = board.next_day_plans.count()
+                elif display_state.get('section') == 'critical_parts':
+                    data_rows = board.critical_parts.count()
+                elif display_state.get('section') == 'afm_plans':
+                    data_rows = board.afm_plans.count()
+                elif display_state.get('section') == 'spd_plans':
+                    data_rows = board.spd_plans.count()
+                elif display_state.get('section') == 'other_info':
+                    data_rows = board.other_info.count()
+                    
+            except PlanningBoard.DoesNotExist:
+                pass
+        
+        status = {
+            'connected': True,
+            'current_board': current_board,
+            'current_section': current_section,
+            'last_update': display_state.get('updated_at'),
+            'updated_by': display_state.get('updated_by'),
+            'data_rows': data_rows,
+            'timestamp': timezone.now().isoformat(),
+        }
+        
+        return JsonResponse(status)
+        
+    except Exception as e:
+        logger.error(f"Monitor status error: {str(e)}")
+        return JsonResponse({
+            'connected': False,
+            'error': str(e),
+            'timestamp': timezone.now().isoformat(),
+        })
+
+@never_cache
+@login_required
+def monitor_data_stream(request, board_id, section):
+    """
+    Enhanced streaming endpoint for monitor display with real-time updates
+    """
+    def event_stream():
+        board = get_object_or_404(PlanningBoard, pk=board_id, created_by=request.user)
+        last_update = timezone.now()
+        heartbeat_counter = 0
+        
+        while True:
+            try:
+                # Check for control commands
+                control_key = f"monitor_control_{request.user.id}"
+                command = cache.get(control_key)
+                
+                if command:
+                    # Send control command to monitor
+                    yield f"event: control\ndata: {json.dumps(command)}\n\n"
+                    cache.delete(control_key)
+                
+                # Check if board has been updated
+                current_board = PlanningBoard.objects.get(pk=board_id, created_by=request.user)
+                
+                if current_board.updated_at > last_update:
+                    # Get data for the specified section
+                    if section == 'today_assembly':
+                        # Get merged assembly data
+                        data = get_merged_assembly_data(board_id, request.user)
+                    else:
+                        # Get single section data
+                        data = get_enhanced_section_data(board_id, section, request.user)
+                    
+                    # Send data update
+                    yield f"data: {json.dumps(data)}\n\n"
+                    
+                    last_update = current_board.updated_at
+                
+                # Send heartbeat every 10 cycles (about 30 seconds)
+                heartbeat_counter += 1
+                if heartbeat_counter >= 10:
+                    heartbeat_data = {
+                        'type': 'heartbeat',
+                        'timestamp': timezone.now().isoformat(),
+                        'board_id': board_id,
+                        'section': section,
+                        'server_time': timezone.now().strftime('%H:%M:%S'),
+                    }
+                    yield f"event: heartbeat\ndata: {json.dumps(heartbeat_data)}\n\n"
+                    heartbeat_counter = 0
+                
+                time.sleep(3)  # Check every 3 seconds
+                
+            except PlanningBoard.DoesNotExist:
+                yield f"event: error\ndata: {json.dumps({'error': 'Board not found'})}\n\n"
+                break
+            except Exception as e:
+                logger.error(f"Monitor stream error: {str(e)}")
+                yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+                time.sleep(5)
+    
+    response = StreamingHttpResponse(event_stream(), content_type='text/event-stream')
+    response['Cache-Control'] = 'no-cache'
+    response['Connection'] = 'keep-alive'
+    response['Access-Control-Allow-Origin'] = '*'
+    
+    return response
+
+def get_merged_assembly_data(board_id, user):
+    """
+    Get merged today + tomorrow + next day assembly data with remarks
+    """
+    try:
+        board = PlanningBoard.objects.get(pk=board_id, created_by=user)
+        
+        # Get today's production lines with remarks
+        production_lines = board.production_lines.all().order_by('line_number')
+        today_data = []
+        for line in production_lines:
+            today_data.append([
+                line.line_number or '',
+                line.a_shift_model or '', line.a_shift_plan or 0, line.a_shift_actual or 0, 
+                (line.a_shift_actual or 0) - (line.a_shift_plan or 0), '6:00-14:30',
+                line.a_shift_remarks or '',  # Added remarks
+                line.b_shift_model or '', line.b_shift_plan or 0, line.b_shift_actual or 0,
+                (line.b_shift_actual or 0) - (line.b_shift_plan or 0), '14:30-23:00',
+                line.b_shift_remarks or '',  # Added remarks
+                line.c_shift_model or '', line.c_shift_plan or 0, line.c_shift_actual or 0,
+                (line.c_shift_actual or 0) - (line.c_shift_plan or 0), '23:00-06:00',
+                line.c_shift_remarks or '',  # Added remarks
+            ])
+        
+        # Get tomorrow's plans
+        tomorrow_plans = board.tomorrow_plans.all().order_by('model')
+        tomorrow_data = []
+        for plan in tomorrow_plans:
+            tomorrow_data.append([
+                plan.model or '',
+                plan.a_shift or 0,
+                plan.b_shift or 0,
+                plan.c_shift or 0,
+            ])
+        
+        # Get next day plans
+        next_day_plans = board.next_day_plans.all().order_by('model')
+        next_day_data = []
+        for plan in next_day_plans:
+            next_day_data.append([
+                plan.model or '',
+                plan.a_shift or 0,
+                plan.b_shift or 0,
+                plan.c_shift or 0,
+            ])
+        
+        # Updated headers to include remarks
+        headers = [
+            'Line No.',
+            'Today A Model', 'Today A Plan', 'Today A Actual', 'Today A Change', 'Today A Time', 'Today A Remarks',
+            'Today B Model', 'Today B Plan', 'Today B Actual', 'Today B Change', 'Today B Time', 'Today B Remarks',
+            'Today C Model', 'Today C Plan', 'Today C Actual', 'Today C Change', 'Today C Time', 'Today C Remarks',
+            'Tomorrow Model', 'Tom A', 'Tom B', 'Tom C', 'Tom Total',
+            'Next Model', 'Next A', 'Next B', 'Next C', 'Next Total',
+        ]
+        
+        merged_data = []
+        max_rows = max(len(today_data), len(tomorrow_data), len(next_day_data))
+        
+        for i in range(max_rows):
+            today_row = today_data[i] if i < len(today_data) else [''] * 19  # Updated to 19 fields (with remarks)
+            tomorrow_row = tomorrow_data[i] if i < len(tomorrow_data) else [''] * 4
+            next_day_row = next_day_data[i] if i < len(next_day_data) else [''] * 4
+            
+            # Calculate totals
+            tom_total = (tomorrow_row[1] or 0) + (tomorrow_row[2] or 0) + (tomorrow_row[3] or 0)
+            next_total = (next_day_row[1] or 0) + (next_day_row[2] or 0) + (next_day_row[3] or 0)
+            
+            merged_row = (
+                today_row +
+                tomorrow_row + [tom_total] +
+                next_day_row + [next_total]
+            )
+            
+            merged_data.append(merged_row)
+        return {
+            'section': 'today_assembly',
+            'title': 'Assembly Plans - Today, Tomorrow & Next Day',
+            'board_title': f"{board.title} - {board.today_date}",
+            'board_id': board.pk,
+            'headers': headers,
+            'data': merged_data,
+            'timestamp': timezone.now().isoformat(),
+            'last_updated': board.updated_at.isoformat(),
+            'statistics': {
+                'total_lines': len(today_data),
+                'tomorrow_models': len(tomorrow_data),
+                'next_day_models': len(next_day_data),
+            }
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting merged assembly data: {str(e)}")
+        return {
+            'section': 'today_assembly',
+            'title': 'Assembly Plans - Error',
+            'headers': [],
+            'data': [],
+            'error': str(e)
+        }

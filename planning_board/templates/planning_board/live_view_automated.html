@@ -1,0 +1,892 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production Planning Live View - Automated</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #06b6d4;
+            
+            --excellent: #10b981;
+            --good: #84cc16;
+            --warning: #f59e0b;
+            --critical: #ef4444;
+            
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-900: #0f172a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+            color: var(--gray-900);
+            line-height: 1.6;
+        }
+
+        /* Status Banner - Minimal and auto-hiding */
+        .status-banner {
+            background: linear-gradient(135deg, var(--success) 0%, #059669 100%);
+            color: white;
+            padding: 0.75rem;
+            text-align: center;
+            font-weight: 500;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            font-size: 0.875rem;
+        }
+
+        .status-banner.hidden {
+            transform: translateY(-100%);
+        }
+
+        /* Main container with top padding for banner */
+        .main-container {
+            padding-top: 60px;
+            min-height: 100vh;
+        }
+
+        /* Loading Screen */
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+
+        .loading-screen.hidden {
+            display: none;
+        }
+
+        .loading-spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--gray-200);
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        .loading-text {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+        }
+
+        .loading-details {
+            font-size: 0.875rem;
+            color: var(--gray-500);
+            text-align: center;
+            max-width: 400px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Data Display - Full screen, minimal UI */
+        .data-display {
+            width: 100%;
+            height: calc(100vh - 60px);
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .data-header {
+            background: var(--gray-900);
+            color: white;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .data-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .data-info {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.disconnected {
+            background: var(--error);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .data-content {
+            flex: 1;
+            overflow: auto;
+            background: white;
+        }
+
+        /* Table Styles - Optimized for full screen viewing */
+        .table-container {
+            height: 100%;
+            overflow: auto;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+
+        .table th {
+            background: var(--gray-100);
+            font-weight: 600;
+            color: var(--gray-700);
+            padding: 0.75rem 0.5rem;
+            text-align: left;
+            border-bottom: 2px solid var(--gray-300);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .table td {
+            padding: 0.75rem 0.5rem;
+            border-bottom: 1px solid var(--gray-200);
+            vertical-align: middle;
+        }
+
+        .table tbody tr {
+            transition: all 0.2s;
+        }
+
+        .table tbody tr:hover {
+            background: var(--gray-50);
+        }
+
+        /* Performance indicators for merged view */
+        .performance-excellent {
+            background: var(--excellent);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-weight: 600;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+
+        .performance-good {
+            background: var(--good);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-weight: 600;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+
+        .performance-warning {
+            background: var(--warning);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-weight: 600;
+            text-align: center;
+            font-size: 0.75rem;
+        }
+
+        .performance-critical {
+            background: var(--critical);
+            color: white;
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.25rem;
+            font-weight: 600;
+            text-align: center;
+            font-size: 0.75rem;
+            animation: pulse-critical 2s infinite;
+        }
+
+        @keyframes pulse-critical {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .numeric-cell {
+            text-align: right;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-weight: 600;
+        }
+
+        /* Line separators for assembly view */
+        .line-separator td {
+            height: 3px !important;
+            padding: 0 !important;
+            border: none !important;
+            background: linear-gradient(90deg, #3b82f6, #1d4ed8) !important;
+        }
+
+        /* Multi-level headers for merged assembly */
+        .header-today {
+            background: #dc2626 !important;
+            color: white !important;
+        }
+
+        .header-tomorrow {
+            background: #059669 !important;
+            color: white !important;
+        }
+
+        .header-next {
+            background: #7c3aed !important;
+            color: white !important;
+        }
+
+        .header-line {
+            background: #374151 !important;
+            color: white !important;
+        }
+
+        /* Error state */
+        .error-state {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
+            text-align: center;
+            padding: 2rem;
+            color: var(--error);
+        }
+
+        .error-icon {
+            font-size: 4rem;
+            margin-bottom: 1rem;
+        }
+
+        .error-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .error-message {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            opacity: 0.8;
+        }
+
+        .retry-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .retry-btn:hover {
+            background: var(--primary-hover);
+        }
+
+        /* Control strip - minimal, bottom right */
+        .control-strip {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.75rem;
+            z-index: 1000;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-strip:hover {
+            opacity: 1;
+        }
+
+        .control-actions {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .control-btn {
+            background: none;
+            border: none;
+            color: white;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            transition: all 0.2s;
+            font-size: 0.75rem;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .data-header {
+                flex-direction: column;
+                gap: 0.5rem;
+                text-align: center;
+            }
+
+            .table {
+                font-size: 0.7rem;
+            }
+
+            .table th,
+            .table td {
+                padding: 0.5rem 0.25rem;
+            }
+
+            .control-strip {
+                bottom: 10px;
+                right: 10px;
+                font-size: 0.7rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Status Banner -->
+    <div class="status-banner" id="statusBanner">
+        <span id="statusText">Initializing automated live view...</span>
+    </div>
+
+    <!-- Loading Screen -->
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">Setting up Live View</div>
+        <div class="loading-details" id="loadingDetails">
+            Configuring dashboard settings and loading production data...
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="main-container">
+        <!-- Data Display -->
+        <div class="data-display" id="dataDisplay" style="display: none;">
+            <div class="data-header">
+                <div class="data-title" id="dataTitle">Production Planning Live View</div>
+                <div class="data-info">
+                    <div class="connection-status">
+                        <div class="status-indicator" id="connectionIndicator"></div>
+                        <span id="connectionText">Connected</span>
+                    </div>
+                    <span id="lastUpdate">Live</span>
+                    <span id="boardInfo">Loading...</span>
+                </div>
+            </div>
+            <div class="data-content">
+                <div id="dataContainer">
+                    <!-- Data will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Error State -->
+        <div class="error-state" id="errorState" style="display: none;">
+            <div class="error-icon">⚠️</div>
+            <div class="error-title">Unable to Load Live View</div>
+            <div class="error-message" id="errorMessage">Please check your configuration and try again.</div>
+            <button class="retry-btn" onclick="retryLoad()">Retry</button>
+            <button class="retry-btn" onclick="goBackToDashboard()" style="background: var(--secondary); margin-left: 1rem;">
+                Back to Dashboard
+            </button>
+        </div>
+    </div>
+
+    <!-- Control Strip -->
+    <div class="control-strip" id="controlStrip" style="display: none;">
+        <div class="control-actions">
+            <span id="refreshInfo">Auto 5s</span>
+            <button class="control-btn" onclick="manualRefresh()" title="Refresh now">🔄</button>
+            <button class="control-btn" onclick="togglePause()" title="Pause/Resume" id="pauseBtn">⏸️</button>
+            <button class="control-btn" onclick="goBackToDashboard()" title="Back to dashboard">🏠</button>
+        </div>
+    </div>
+
+    <script>
+        // Configuration from Django template
+        const config = {
+            boardId: {{ live_config.selected_board_id|default:"null" }},
+            boardTitle: "{{ live_config.selected_board_title|escapejs }}",
+            boardDate: "{{ live_config.selected_board_date|escapejs }}",
+            section: "{{ live_config.selected_section|escapejs }}",
+            autoStart: {{ live_config.auto_start|yesno:"true,false" }},
+            refreshInterval: {{ live_config.refresh_interval|default:"5000" }},
+            autoFullscreen: {{ live_config.auto_fullscreen|yesno:"true,false" }},
+            showAlerts: {{ live_config.show_alerts|yesno:"true,false" }},
+            skipSelection: {{ live_config.skip_selection|yesno:"true,false" }}
+        };
+
+        // Global state
+        let isStreaming = false;
+        let isPaused = false;
+        let refreshTimer = null;
+        let currentData = null;
+
+        // Auto-start sequence
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Automated live view starting with config:', config);
+            
+            if (!config.boardId) {
+                showError('No board selected', 'Please configure your dashboard settings and try again.');
+                return;
+            }
+
+            // Hide status banner after 3 seconds
+            setTimeout(() => {
+                document.getElementById('statusBanner').classList.add('hidden');
+            }, 3000);
+
+            // Start the automated sequence
+            startAutomatedSequence();
+        });
+
+        async function startAutomatedSequence() {
+            try {
+                updateLoadingMessage('Loading board data...');
+                
+                // Load board info
+                const boardResponse = await fetch(`/planning/api/board/${config.boardId}/sections/`);
+                if (!boardResponse.ok) throw new Error('Failed to load board data');
+                
+                const boardData = await boardResponse.json();
+                updateBoardInfo(boardData);
+                
+                updateLoadingMessage('Loading section data...');
+                
+                // Load the configured section data
+                await loadSectionData(config.section);
+                
+                updateLoadingMessage('Starting live streaming...');
+                
+                // Auto-start streaming if configured
+                if (config.autoStart) {
+                    startStreaming();
+                }
+                
+                // Hide loading screen and show data
+                document.getElementById('loadingScreen').classList.add('hidden');
+                document.getElementById('dataDisplay').style.display = 'flex';
+                document.getElementById('controlStrip').style.display = 'block';
+                
+                updateStatusBanner('Live view active - fully automated');
+                
+            } catch (error) {
+                console.error('Error in automated sequence:', error);
+                showError('Initialization Failed', error.message);
+            }
+        }
+
+        function updateLoadingMessage(message) {
+            document.getElementById('loadingDetails').textContent = message;
+        }
+
+        function updateBoardInfo(boardData) {
+            document.getElementById('boardInfo').textContent = `${config.boardTitle} (${config.boardDate})`;
+            document.getElementById('dataTitle').textContent = `${config.section.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} - ${config.boardTitle}`;
+        }
+
+        async function loadSectionData(sectionName) {
+            try {
+                // Special handling for today_assembly - merge all three sections
+                if (sectionName === 'today_assembly') {
+                    const [todayResponse, tomorrowResponse, nextDayResponse] = await Promise.all([
+                        fetch(`/planning/api/board/${config.boardId}/section/today_assembly/`),
+                        fetch(`/planning/api/board/${config.boardId}/section/tomorrow_assembly/`),
+                        fetch(`/planning/api/board/${config.boardId}/section/next_day_assembly/`)
+                    ]);
+                    
+                    const [todayData, tomorrowData, nextDayData] = await Promise.all([
+                        todayResponse.json(),
+                        tomorrowResponse.json(),
+                        nextDayResponse.json()
+                    ]);
+                    
+                    const mergedData = mergeAssemblyData(todayData, tomorrowData, nextDayData);
+                    displayData(mergedData);
+                } else {
+                    const response = await fetch(`/planning/api/board/${config.boardId}/section/${sectionName}/`);
+                    if (!response.ok) throw new Error(`Failed to load ${sectionName} data`);
+                    
+                    const data = await response.json();
+                    displayData(data);
+                }
+                
+                updateLastUpdate();
+                
+            } catch (error) {
+                console.error('Error loading section data:', error);
+                throw error;
+            }
+        }
+
+        function mergeAssemblyData(todayData, tomorrowData, nextDayData) {
+            return {
+                section: 'today_assembly',
+                title: 'Assembly Plans - Today, Tomorrow & Next Day',
+                headers: [
+                    'Line No.',
+                    // Today columns (15)
+                    'Today A Model', 'Today A Plan', 'Today A Actual', 'Today A Change', 'Today A Time',
+                    'Today B Model', 'Today B Plan', 'Today B Actual', 'Today B Change', 'Today B Time',
+                    'Today C Model', 'Today C Plan', 'Today C Actual', 'Today C Change', 'Today C Time',
+                    // Tomorrow columns (5)
+                    'Tomorrow Model', 'Tom A', 'Tom B', 'Tom C', 'Tom Total', 
+                    // Next Day columns (5)
+                    'Next Model', 'Next A', 'Next B', 'Next C', 'Next Total'
+                ],
+                data: mergeRowData(todayData.data || [], tomorrowData.data || [], nextDayData.data || [])
+            };
+        }
+
+        function mergeRowData(todayRows, tomorrowRows, nextDayRows) {
+            const maxRows = Math.max(todayRows.length, tomorrowRows.length, nextDayRows.length);
+            const mergedRows = [];
+
+            for (let i = 0; i < maxRows; i++) {
+                const todayRow = todayRows[i] || [];
+                const tomorrowRow = tomorrowRows[i] || [];
+                const nextDayRow = nextDayRows[i] || [];
+
+                const tomTotal = (parseInt(tomorrowRow[1]) || 0) + (parseInt(tomorrowRow[2]) || 0) + (parseInt(tomorrowRow[3]) || 0);
+                const nextTotal = (parseInt(nextDayRow[1]) || 0) + (parseInt(nextDayRow[2]) || 0) + (parseInt(nextDayRow[3]) || 0);
+
+                const mergedRow = [
+                    todayRow[0] || `Line ${i + 1}`,
+                    
+                    // Today data (15 columns)
+                    todayRow[1] || '', todayRow[2] || 0, todayRow[3] || 0, todayRow[4] || 0, todayRow[5] || '6:00-14:30',
+                    todayRow[6] || '', todayRow[7] || 0, todayRow[8] || 0, todayRow[9] || 0, todayRow[10] || '14:30-23:00',
+                    todayRow[11] || '', todayRow[12] || 0, todayRow[13] || 0, todayRow[14] || 0, todayRow[15] || '23:00-06:00',
+                    
+                    // Tomorrow data (5 columns)
+                    tomorrowRow[0] || '', tomorrowRow[1] || 0, tomorrowRow[2] || 0, tomorrowRow[3] || 0, tomTotal,
+                    
+                    // Next day data (5 columns)
+                    nextDayRow[0] || '', nextDayRow[1] || 0, nextDayRow[2] || 0, nextDayRow[3] || 0, nextTotal
+                ];
+
+                mergedRows.push(mergedRow);
+            }
+
+            return mergedRows;
+        }
+
+        function displayData(data) {
+            currentData = data;
+            
+            if (!data.data || data.data.length === 0) {
+                document.getElementById('dataContainer').innerHTML = `
+                    <div style="display: flex; justify-content: center; align-items: center; height: 100%; flex-direction: column; color: var(--gray-500);">
+                        <div style="font-size: 3rem; margin-bottom: 1rem;">📋</div>
+                        <h3>No Data Available</h3>
+                        <p>No data found for this section.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            const tableHtml = createTableHtml(data.headers, data.data);
+            document.getElementById('dataContainer').innerHTML = tableHtml;
+        }
+
+        function createTableHtml(headers, data) {
+            let html = '<div class="table-container"><table class="table"><thead>';
+            
+            const isMergedView = headers.includes('Today A Model') && headers.includes('Tomorrow Model');
+            
+            if (isMergedView) {
+                // Multi-level headers for merged assembly view
+                html += `
+                    <tr>
+                        <th rowspan="2" class="header-line">Line No.</th>
+                        <th colspan="15" class="header-today">TODAY ASSEMBLY</th>
+                        <th colspan="5" class="header-tomorrow">TOMORROW ASSEMBLY</th>
+                        <th colspan="5" class="header-next">NEXT DAY ASSEMBLY</th>
+                    </tr>
+                    <tr>
+                `;
+                
+                // Sub-headers
+                const todaySubHeaders = ['A Model', 'A Plan', 'A Actual', 'A Change', 'A Time', 
+                                        'B Model', 'B Plan', 'B Actual', 'B Change', 'B Time',
+                                        'C Model', 'C Plan', 'C Actual', 'C Change', 'C Time'];
+                todaySubHeaders.forEach(header => {
+                    html += `<th class="header-today">${header}</th>`;
+                });
+                
+                const tomorrowSubHeaders = ['Model', 'A', 'B', 'C', 'Total'];
+                tomorrowSubHeaders.forEach(header => {
+                    html += `<th class="header-tomorrow">${header}</th>`;
+                });
+                
+                const nextDaySubHeaders = ['Model', 'A', 'B', 'C', 'Total'];
+                nextDaySubHeaders.forEach(header => {
+                    html += `<th class="header-next">${header}</th>`;
+                });
+                
+                html += '</tr>';
+            } else {
+                // Regular headers
+                html += '<tr>';
+                headers.forEach(header => {
+                    html += `<th>${header}</th>`;
+                });
+                html += '</tr>';
+            }
+            
+            html += '</thead><tbody>';
+            
+            // Data rows
+            data.forEach((row, rowIndex) => {
+                html += '<tr>';
+                
+                row.forEach((cell, cellIndex) => {
+                    let cellContent = cell === null || cell === undefined || cell === '' ? '-' : cell;
+                    let cellClass = '';
+                    let cellStyle = '';
+                    
+                    if (isMergedView) {
+                        if (cellIndex === 0) {
+                            cellStyle = 'background: #f8fafc; font-weight: 600;';
+                        } else if (cellIndex >= 1 && cellIndex <= 15) {
+                            cellClass = 'numeric-cell';
+                            // Performance indicators for actual columns
+                            if (cellIndex === 3 || cellIndex === 8 || cellIndex === 13) {
+                                const planIndex = cellIndex - 1;
+                                const planValue = parseFloat(row[planIndex]);
+                                const actualValue = parseFloat(cell);
+                                
+                                if (!isNaN(planValue) && !isNaN(actualValue) && planValue > 0) {
+                                    const percentage = (actualValue / planValue) * 100;
+                                    let performanceClass = '';
+                                    
+                                    if (percentage >= 110) performanceClass = 'performance-excellent';
+                                    else if (percentage >= 90) performanceClass = 'performance-good';
+                                    else if (percentage >= 70) performanceClass = 'performance-warning';
+                                    else performanceClass = 'performance-critical';
+                                    
+                                    cellContent = `<div class="${performanceClass}">${formatNumber(actualValue)}</div>`;
+                                }
+                            }
+                        } else {
+                            cellClass = 'numeric-cell';
+                        }
+                    } else {
+                        if (isNumericField(cell)) {
+                            cellClass = 'numeric-cell';
+                            cellContent = formatNumber(cell);
+                        }
+                    }
+                    
+                    html += `<td class="${cellClass}" style="${cellStyle}">${cellContent}</td>`;
+                });
+                
+                html += '</tr>';
+                
+                // Line separators for merged view
+                if (isMergedView && shouldAddLineSeparator(data, rowIndex)) {
+                    html += `<tr class="line-separator"><td colspan="${headers.length}"></td></tr>`;
+                }
+            });
+            
+            html += '</tbody></table></div>';
+            return html;
+        }
+
+        function shouldAddLineSeparator(data, rowIndex) {
+            if (rowIndex >= data.length - 1) return false;
+            
+            const currentLineName = extractLineName(data[rowIndex][0]);
+            const nextLineName = extractLineName(data[rowIndex + 1][0]);
+            
+            return currentLineName !== nextLineName;
+        }
+
+        function extractLineName(fullName) {
+            if (!fullName || typeof fullName !== 'string') return '';
+            const match = fullName.match(/^(.+?)(\s*-\s*Entry\s*\d+)?$/i);
+            return match ? match[1].trim() : fullName.trim();
+        }
+
+        function isNumericField(value) {
+            return !isNaN(parseFloat(value)) && isFinite(value);
+        }
+
+        function formatNumber(value) {
+            const num = parseFloat(value);
+            if (isNaN(num)) return value;
+            return Math.abs(num) >= 1000 ? num.toLocaleString() : num.toString();
+        }
+
+        function startStreaming() {
+            if (refreshTimer) clearInterval(refreshTimer);
+
+            if (config.refreshInterval > 0) {
+                refreshTimer = setInterval(() => {
+                    if (!isPaused) {
+                        refreshData();
+                    }
+                }, config.refreshInterval);
+            }
+
+            isStreaming = true;
+            updateConnectionStatus(true);
+            updateRefreshInfo();
+        }
+
+        function stopStreaming() {
+            if (refreshTimer) {
+                clearInterval(refreshTimer);
+                refreshTimer = null;
+            }
+            isStreaming = false;
+            updateConnectionStatus(false);
+        }
+
+        async function refreshData() {
+            try {
+                await loadSectionData(config.section);
+                updateLastUpdate();
+            } catch (error) {
+                console.error('Error refreshing data:', error);
+                updateConnectionStatus(false);
+            }
+        }
+
+        function manualRefresh() {
+            refreshData();
+        }
+
+        function togglePause() {
+            isPaused = !isPaused;
+            const pauseBtn = document.getElementById('pauseBtn');
+            pauseBtn.textContent = isPaused ? '▶️' : '⏸️';
+            pauseBtn.title = isPaused ? 'Resume' : 'Pause';
+            updateRefreshInfo();
+        }
+
+        function updateConnectionStatus(connected) {
+            const indicator = document.getElementById('connectionIndicator');
+            const text = document.getElementById('connectionText');
+            
+            indicator.className = connected ? 'status-indicator' : 'status-indicator disconnected';
+            text.textContent = connected ? 'Live' : 'Disconnected';
+        }
+
+        function updateLastUpdate() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = now.toLocaleTimeString();
+        }
+
+        function updateRefreshInfo() {
+            const refreshInfo = document.getElementById('refreshInfo');
+            if (isPaused) {
+                refreshInfo.textContent = 'Paused';
+            } else if (config.refreshInterval === 0) {
+                refreshInfo.textContent = 'Manual';
+            } else {
+                refreshInfo.textContent = `Auto ${config.refreshInterval/1000}s`;
+            }
+        }
+
+        function updateStatusBanner(message) {
+            document.getElementById('statusText').textContent = message;
+        }
+
+        function showError(title, message) {
+            document.getElementById('loadingScreen').classList.add('hidden');
+            document.getElementById('dataDisplay').style.display = 'none';
+            document.getElementById('errorState').style.display = 'flex';
+            document.getElementById('errorMessage').textContent = message;
+        }
+
+        function retryLoad() {
+            document.getElementById('errorState').style.display = 'none';
+            document.getElementById('loadingScreen').classList.remove('hidden');
+            startAutomatedSequence();
+        }
+
+        function goBackToDashboard() {
+            if (refreshTimer) clearInterval(refreshTimer);
+            window.location.href = '/planning/dashboard/controls/';
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (refreshTimer) clearInterval(refreshTimer);
+        });
+
+        // Initialize refresh info display
+        updateRefreshInfo();
+
+        console.log('Automated live view initialized');
+    </script>
+</body>
+</html>

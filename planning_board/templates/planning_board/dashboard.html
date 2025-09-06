@@ -569,8 +569,11 @@
         <h1>FCC Manesar Production Planning Dashboard</h1>
         <p>Manage and monitor your production planning boards efficiently</p>
         <br>
-        <a href="{% url 'planning_board:live_view' %}" class="btn btn-outline-primary">
+        <a href="{% url 'planning_board:monitor_display' %}" class="btn btn-outline-primary">
             🔴 Live View
+        </a>
+        <a href="{% url 'planning_board:monitor_controller' %}" class="btn btn-outline-primary">
+            🎛️ Control Panel
         </a>
     </div>
 

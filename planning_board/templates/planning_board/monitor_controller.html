@@ -1,0 +1,1270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production Monitor Controller</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --info: #06b6d4;
+            --gray-50: #f8fafc;
+            --gray-100: #f1f5f9;
+            --gray-200: #e2e8f0;
+            --gray-300: #cbd5e1;
+            --gray-500: #64748b;
+            --gray-600: #475569;
+            --gray-700: #334155;
+            --gray-900: #0f172a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%);
+            color: var(--gray-900);
+            line-height: 1.4;
+            font-size: 0.9rem;
+        }
+
+        .controller-container {
+            max-width: 100vw;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        /* Compact Header */
+        .controller-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+            color: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 1rem;
+            text-align: center;
+        }
+
+        .controller-header h1 {
+            font-size: 1.3rem;
+            font-weight: 600;
+            margin-bottom: 0.3rem;
+        }
+
+        .controller-header p {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        /* Compact Control Grid */
+        .control-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+
+        .control-section {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--gray-200);
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            color: var(--gray-700);
+            margin-bottom: 0.3rem;
+            font-size: 0.85rem;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 0.5rem 0.7rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 0.3rem;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.1);
+        }
+
+        .btn {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.3rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+        }
+
+        .btn-success {
+            background: var(--success);
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #0d9488;
+        }
+
+        .btn-warning {
+            background: var(--warning);
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #d97706;
+        }
+
+        .btn-secondary {
+            background: var(--gray-200);
+            color: var(--gray-700);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-300);
+        }
+
+        .btn-full {
+            width: 100%;
+            justify-content: center;
+        }
+
+        .btn-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.5rem;
+        }
+
+        /* Compact Section Cards */
+        .section-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-card {
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: 0.3rem;
+            padding: 0.7rem 0.5rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .section-card:hover {
+            transform: translateY(-1px);
+            border-color: var(--primary);
+            background: #dbeafe;
+        }
+
+        .section-card.active {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .section-icon {
+            font-size: 1.2rem;
+            margin-bottom: 0.3rem;
+            display: block;
+        }
+
+        .section-name {
+            font-weight: 500;
+            margin-bottom: 0.2rem;
+            font-size: 0.8rem;
+        }
+
+        .section-description {
+            font-size: 0.7rem;
+            opacity: 0.8;
+        }
+
+        /* Status Display */
+        .status-display {
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--gray-200);
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.75rem;
+        }
+
+        .status-item {
+            text-align: center;
+            padding: 0.75rem;
+            background: var(--gray-50);
+            border-radius: 0.3rem;
+            border: 1px solid var(--gray-200);
+        }
+
+        .status-value {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: var(--primary);
+            margin-bottom: 0.3rem;
+        }
+
+        .status-label {
+            font-size: 0.7rem;
+            color: var(--gray-600);
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+        }
+
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            justify-content: center;
+            margin-bottom: 0.75rem;
+            font-size: 0.85rem;
+        }
+
+        .connection-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .connection-indicator.disconnected {
+            background: var(--error);
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .alert {
+            padding: 0.7rem 1rem;
+            border-radius: 0.3rem;
+            margin-bottom: 0.75rem;
+            border-left: 3px solid;
+            font-size: 0.85rem;
+        }
+
+        .alert-success {
+            background: #d1fae5;
+            border-color: var(--success);
+            color: #065f46;
+        }
+
+        .alert-warning {
+            background: #fef3c7;
+            border-color: var(--warning);
+            color: #92400e;
+        }
+
+        .alert-error {
+            background: #fee2e2;
+            border-color: var(--error);
+            color: #dc2626;
+        }
+
+        .alert-info {
+            background: #dbeafe;
+            border-color: var(--info);
+            color: #1e40af;
+        }
+
+        /* Compact Quick Actions */
+        .quick-actions {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .quick-action-btn {
+            padding: 0.6rem 1rem;
+            font-size: 0.85rem;
+            font-weight: 500;
+            border-radius: 0.3rem;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            flex: 1;
+            justify-content: center;
+            min-width: 140px;
+        }
+
+        /* Compact Monitor Preview */
+        .monitor-preview {
+            background: var(--gray-900);
+            border-radius: 0.5rem;
+            padding: 0.75rem;
+            margin-top: 1rem;
+            color: white;
+            text-align: center;
+        }
+
+        .preview-screen {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            border-radius: 0.3rem;
+            padding: 1rem;
+            margin: 0.5rem 0;
+            border: 1px solid var(--gray-700);
+        }
+
+        .preview-title {
+            font-size: 1rem;
+            font-weight: 500;
+            margin-bottom: 0.3rem;
+        }
+
+        .preview-subtitle {
+            opacity: 0.7;
+            margin-bottom: 0.5rem;
+            font-size: 0.85rem;
+        }
+
+        .preview-data {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.3rem;
+            padding: 0.5rem;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.75rem;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .controller-container {
+                padding: 0.5rem;
+            }
+            
+            .control-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .section-cards {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .section-cards {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            .quick-actions {
+                flex-direction: column;
+            }
+            
+            .quick-action-btn {
+                min-width: 100%;
+            }
+        }
+
+            .btn-industrial {
+        background: #10B981 !important;
+        border: none !important;
+        color: white !important;
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-weight: 500;
+        text-decoration: none !important;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.2s;
+        font-size: 0.9rem;
+        cursor: pointer;
+    }
+
+    .btn-industrial:hover {
+        background:#0e9f6e !important;
+        color: white !important;
+        text-decoration: none !important;
+        transform: translateY(-1px);
+    }
+
+ 
+    </style>
+</head>
+<body>
+    <div class="controller-container">
+        <!-- Compact Header -->
+        <div class="controller-header">
+            <h1>Production Monitor Controller</h1>
+            <p>Control what displays on the production monitor in real-time</p>
+            <br>
+                        <a href="{% url 'dashboard' %}" class="btn-industrial btn-secondary-industrial">
+                <i class="fas fa-arrow-left"></i> Back to Home
+            </a>
+        </div>
+
+        <!-- Alert Area -->
+        <div id="alertArea"></div>
+
+        <!-- Compact Control Grid -->
+        <div class="control-grid">
+            <!-- Display Control -->
+            <div class="control-section">
+                <h2 class="section-title">
+                    <span>📺</span>
+                    Display Control
+                </h2>
+
+                <div class="form-group">
+                    <label for="boardSelect">Planning Board</label>
+                    <select id="boardSelect" class="form-control">
+                        <option value="">Loading boards...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Section to Display</label>
+                    <div class="section-cards">
+                        <div class="section-card" data-section="today_assembly">
+                            <span class="section-icon">📋</span>
+                            <div class="section-name">Today</div>
+                            <div class="section-description">Assembly + Plans</div>
+                        </div>
+                        <div class="section-card" data-section="critical_parts">
+                            <span class="section-icon">⚠️</span>
+                            <div class="section-name">Critical</div>
+                            <div class="section-description">Parts Status</div>
+                        </div>
+                        <div class="section-card" data-section="afm_plans">
+                            <span class="section-icon">🔧</span>
+                            <div class="section-name">AFM</div>
+                            <div class="section-description">FCIN & I/U</div>
+                        </div>
+                        <div class="section-card" data-section="spd_plans">
+                            <span class="section-icon">🏢</span>
+                            <div class="section-name">SPD</div>
+                            <div class="section-description">Customer Plans</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="btn-grid">
+                    <button class="btn btn-primary btn-full" id="updateDisplayBtn">
+                        📡 Update Monitor Display
+                    </button>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="control-section">
+                <h2 class="section-title">
+                    <span>⚡</span>
+                    Quick Actions
+                </h2>
+
+                <div class="quick-actions">
+                    <button class="quick-action-btn btn-success" id="refreshDataBtn">
+                        🔄 Refresh Data
+                    </button>
+                    <button class="quick-action-btn btn-warning" id="showMessageBtn">
+                        💬 Send Message
+                    </button>
+                </div>
+
+                <div class="form-group">
+                    <label for="messageInput">Message to Monitor</label>
+                    <input type="text" id="messageInput" class="form-control" placeholder="Enter message to display on monitor...">
+                </div>
+
+                <div class="btn-grid">
+                    <button class="btn btn-primary" id="sendMessageBtn">Send Message</button>
+                    <button class="btn btn-secondary" id="clearMessageBtn">Clear Messages</button>
+                </div>
+            </div>
+
+            <!-- Settings -->
+            <div class="control-section">
+                <h2 class="section-title">
+                    <span>⚙️</span>
+                    Settings
+                </h2>
+
+                <div class="form-group">
+                    <label for="refreshInterval">Auto Refresh Interval</label>
+                    <select id="refreshInterval" class="form-control">
+                        <option value="3000">Every 3 seconds</option>
+                        <option value="5000" selected>Every 5 seconds</option>
+                        <option value="10000">Every 10 seconds</option>
+                        <option value="30000">Every 30 seconds</option>
+                        <option value="0">Manual only</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="autoModeCheckbox" checked> 
+                        Auto-select latest board
+                    </label>
+                </div>
+
+                <div class="btn-grid">
+                    <button class="btn btn-primary" id="applySettingsBtn">Apply Settings</button>
+                    <a href="/planning/monitor/display/" target="_blank" class="btn btn-secondary">
+                        🖥️ Open Monitor View
+                    </a>
+                </div>
+            </div>
+
+            <!-- Monitor Status -->
+            <div class="control-section">
+                <h2 class="section-title">
+                    <span>📊</span>
+                    Monitor Status
+                </h2>
+
+                <div class="connection-status">
+                    <div class="connection-indicator" id="monitorConnectionIndicator"></div>
+                    <span id="monitorConnectionStatus">Checking connection...</span>
+                </div>
+
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-value" id="currentBoard">-</div>
+                        <div class="status-label">Current Board</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-value" id="currentSection">-</div>
+                        <div class="status-label">Current Section</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-value" id="lastUpdate">-</div>
+                        <div class="status-label">Last Update</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-value" id="dataRows">-</div>
+                        <div class="status-label">Data Rows</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Compact Monitor Preview -->
+        <div class="status-display">
+            <h2 class="section-title">
+                <span>🖥️</span>
+                Monitor Preview
+            </h2>
+            
+            <div class="monitor-preview">
+                <div class="preview-screen">
+                    <div class="preview-title" id="previewTitle">Production Planning Monitor</div>
+                    <div class="preview-subtitle" id="previewSubtitle">Waiting for data...</div>
+                    <div class="preview-data" id="previewData">
+                        No data loaded yet. Select a board and section to begin.
+                    </div>
+                </div>
+                <p style="font-size: 0.75rem; margin-top: 0.5rem;">This is a preview of what appears on the production monitor</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let selectedBoard = null;
+        let selectedSection = 'today_assembly';
+        let statusCheckInterval = null;
+
+        // Initialize controller
+        document.addEventListener('DOMContentLoaded', function() {
+            setupEventListeners();
+            loadPlanningBoards();
+            startStatusChecking();
+            
+            // Auto-select today_assembly by default
+            selectSection('today_assembly');
+        });
+
+        function setupEventListeners() {
+            // Board selection
+            document.getElementById('boardSelect').addEventListener('change', function() {
+                selectedBoard = this.value;
+                updatePreview();
+            });
+
+            // Section selection
+            document.querySelectorAll('.section-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    selectSection(this.dataset.section);
+                });
+            });
+
+            // Control buttons
+            document.getElementById('updateDisplayBtn').addEventListener('click', updateMonitorDisplay);
+            document.getElementById('refreshDataBtn').addEventListener('click', refreshMonitorData);
+            document.getElementById('sendMessageBtn').addEventListener('click', sendMessageToMonitor);
+            document.getElementById('clearMessageBtn').addEventListener('click', clearMonitorMessages);
+            document.getElementById('applySettingsBtn').addEventListener('click', applySettings);
+
+            // Message input - send on Enter key
+            document.getElementById('messageInput').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    sendMessageToMonitor();
+                }
+            });
+        }
+
+        function selectSection(sectionName) {
+            // Update UI
+            document.querySelectorAll('.section-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            
+            const selectedCard = document.querySelector(`[data-section="${sectionName}"]`);
+            if (selectedCard) {
+                selectedCard.classList.add('active');
+            }
+
+            selectedSection = sectionName;
+            updatePreview();
+        }
+
+        function loadPlanningBoards() {
+            fetch('/planning/api/boards/')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('boardSelect');
+                    select.innerHTML = '<option value="">Choose a planning board...</option>';
+                    
+                    if (data.boards && data.boards.length > 0) {
+                        const sortedBoards = data.boards.sort((a, b) => new Date(b.date) - new Date(a.date));
+                        
+                        sortedBoards.forEach(board => {
+                            const option = document.createElement('option');
+                            option.value = board.id;
+                            option.textContent = `${board.title} - ${board.date}`;
+                            select.appendChild(option);
+                        });
+                        
+                        // Auto-select latest board if enabled
+                        if (document.getElementById('autoModeCheckbox').checked) {
+                            select.value = sortedBoards[0].id;
+                            selectedBoard = sortedBoards[0].id;
+                            updatePreview();
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading boards:', error);
+                    showAlert('Failed to load planning boards', 'error');
+                });
+        }
+
+        function updateMonitorDisplay() {
+            if (!selectedBoard || !selectedSection) {
+                showAlert('Please select a board and section first', 'warning');
+                return;
+            }
+
+            const command = {
+                action: 'change_display',
+                board_id: selectedBoard,
+                section: selectedSection,
+                timestamp: new Date().toISOString()
+            };
+
+            // Use HTTP only - no WebSocket
+            fetch('/planning/api/monitor/control/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(command)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Display updated successfully', 'success');
+                } else {
+                    showAlert('Failed to update display', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error updating display:', error);
+                showAlert('Error updating display', 'error');
+            });
+
+            updatePreview();
+        }
+
+        function refreshMonitorData() {
+            const command = {
+                action: 'refresh_data',
+                timestamp: new Date().toISOString()
+            };
+
+            fetch('/planning/api/monitor/control/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(command)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Data refresh triggered', 'info');
+                }
+            })
+            .catch(error => {
+                console.error('Error refreshing data:', error);
+                showAlert('Error refreshing data', 'error');
+            });
+        }
+
+        function sendMessageToMonitor() {
+            const message = document.getElementById('messageInput').value.trim();
+            if (!message) {
+                showAlert('Please enter a message to send', 'warning');
+                return;
+            }
+
+            const command = {
+                action: 'show_message',
+                message: message,
+                type: 'info',
+                timestamp: new Date().toISOString()
+            };
+
+            fetch('/planning/api/monitor/control/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(command)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert(`Message sent: "${message}"`, 'success');
+                }
+            })
+            .catch(error => {
+                console.error('Error sending message:', error);
+                showAlert('Error sending message', 'error');
+            });
+
+            // Clear the input
+            document.getElementById('messageInput').value = '';
+        }
+
+        function clearMonitorMessages() {
+            const command = {
+                action: 'clear_messages',
+                timestamp: new Date().toISOString()
+            };
+
+            fetch('/planning/api/monitor/control/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(command)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Messages cleared', 'info');
+                }
+            })
+            .catch(error => {
+                console.error('Error clearing messages:', error);
+                showAlert('Error clearing messages', 'error');
+            });
+        }
+
+        function applySettings() {
+            const refreshInterval = document.getElementById('refreshInterval').value;
+            const autoMode = document.getElementById('autoModeCheckbox').checked;
+
+            const config = {
+                refresh_interval: parseInt(refreshInterval),
+                auto_mode: autoMode
+            };
+
+            const command = {
+                action: 'update_config',
+                config: config,
+                timestamp: new Date().toISOString()
+            };
+
+            fetch('/planning/api/monitor/control/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(command)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showAlert('Settings applied successfully', 'success');
+                }
+            })
+            .catch(error => {
+                console.error('Error applying settings:', error);
+                showAlert('Error applying settings', 'error');
+            });
+        }
+
+        function updatePreview() {
+            const boardSelect = document.getElementById('boardSelect');
+            const boardTitle = boardSelect.options[boardSelect.selectedIndex]?.text || 'No board selected';
+            
+            const sectionNames = {
+                'today_assembly': 'Today Assembly + Tomorrow & Next Day Plans',
+                'tomorrow_assembly': 'Tomorrow Assembly Plan',
+                'next_day_assembly': 'Next Day Assembly Plan',
+                'critical_parts': 'Critical Parts Status',
+                'afm_plans': 'AFM Plans (FCIN & I/U)',
+                'spd_plans': 'SPD Customer Plans'
+            };
+
+            document.getElementById('previewTitle').textContent = sectionNames[selectedSection] || 'Production Data';
+            document.getElementById('previewSubtitle').textContent = boardTitle;
+            
+            if (selectedBoard && selectedSection) {
+                document.getElementById('previewData').textContent = `Displaying: ${sectionNames[selectedSection]} from ${boardTitle}`;
+            } else {
+                document.getElementById('previewData').textContent = 'Select a board and section to display data';
+            }
+        }
+
+        function startStatusChecking() {
+            // Check monitor status every 10 seconds
+            statusCheckInterval = setInterval(checkMonitorStatus, 10000);
+            checkMonitorStatus(); // Initial check
+        }
+
+        function checkMonitorStatus() {
+            fetch('/planning/api/monitor/status/')
+                .then(response => response.json())
+                .then(data => {
+                    updateStatusDisplay(data);
+                })
+                .catch(error => {
+                    console.error('Error checking monitor status:', error);
+                    updateMonitorConnectionStatus('disconnected');
+                });
+        }
+
+        function updateStatusDisplay(status) {
+            document.getElementById('currentBoard').textContent = status.current_board || '-';
+            document.getElementById('currentSection').textContent = status.current_section || '-';
+            document.getElementById('lastUpdate').textContent = status.last_update || '-';
+            document.getElementById('dataRows').textContent = status.data_rows || '-';
+            
+            if (status.connected) {
+                updateMonitorConnectionStatus('connected');
+            } else {
+                updateMonitorConnectionStatus('disconnected');
+            }
+        }
+
+        function updateMonitorConnectionStatus(status) {
+            const indicator = document.getElementById('monitorConnectionIndicator');
+            const statusText = document.getElementById('monitorConnectionStatus');
+            
+            indicator.className = 'connection-indicator';
+            
+            switch (status) {
+                case 'connected':
+                    statusText.textContent = 'Monitor Connected';
+                    break;
+                case 'disconnected':
+                    indicator.classList.add('disconnected');
+                    statusText.textContent = 'Monitor Disconnected';
+                    break;
+                case 'http-mode':
+                    statusText.textContent = 'HTTP Mode';
+                    break;
+                default:
+                    statusText.textContent = 'Checking connection...';
+            }
+        }
+
+        function showAlert(message, type = 'info') {
+            const alertArea = document.getElementById('alertArea');
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+            
+            alertArea.appendChild(alertDiv);
+            
+            // Auto-remove after 4 seconds
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.parentNode.removeChild(alertDiv);
+                }
+            }, 4000);
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+            }
+        });
+
+        // Handle keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Ctrl/Cmd + R for refresh
+            if ((e.ctrlKey || e.metaKey) && e.key === 'r') {
+                e.preventDefault();
+                refreshMonitorData();
+                window.location.reload();
+            }
+            
+            // Ctrl/Cmd + U for update display
+            if ((e.ctrlKey || e.metaKey) && e.key === 'u') {
+                e.preventDefault();
+                updateMonitorDisplay();
+            }
+            
+            // Number keys 1-6 for quick section selection
+            if (e.key >= '1' && e.key <= '6' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                const sections = ['today_assembly', 'tomorrow_assembly', 'next_day_assembly', 'critical_parts', 'afm_plans', 'spd_plans'];
+                const sectionIndex = parseInt(e.key) - 1;
+                if (sections[sectionIndex]) {
+                    selectSection(sections[sectionIndex]);
+                }
+            }
+        });
+
+        // Auto-focus on message input when showing message section
+        document.getElementById('showMessageBtn').addEventListener('click', function() {
+            setTimeout(() => {
+                document.getElementById('messageInput').focus();
+            }, 100);
+        });
+
+        // Enhanced keyboard navigation
+        document.addEventListener('keydown', function(e) {
+            // Tab through section cards with arrow keys
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                const activeCard = document.querySelector('.section-card.active');
+                if (activeCard) {
+                    const cards = Array.from(document.querySelectorAll('.section-card'));
+                    const currentIndex = cards.indexOf(activeCard);
+                    let newIndex;
+                    
+                    if (e.key === 'ArrowRight') {
+                        newIndex = (currentIndex + 1) % cards.length;
+                    } else {
+                        newIndex = (currentIndex - 1 + cards.length) % cards.length;
+                    }
+                    
+                    selectSection(cards[newIndex].dataset.section);
+                    e.preventDefault();
+                }
+            }
+            
+            // Enter to update display
+            if (e.key === 'Enter' && e.ctrlKey) {
+                updateMonitorDisplay();
+                e.preventDefault();
+            }
+        });
+
+        // Add loading states to buttons
+        function setButtonLoading(buttonId, loading) {
+            const button = document.getElementById(buttonId);
+            if (loading) {
+                button.disabled = true;
+                button.textContent = 'Loading...';
+            } else {
+                button.disabled = false;
+                // Restore original text based on button
+                if (buttonId === 'updateDisplayBtn') {
+                    button.innerHTML = '📡 Update Monitor Display';
+                } else if (buttonId === 'refreshDataBtn') {
+                    button.innerHTML = '🔄 Refresh Data';
+                } else if (buttonId === 'sendMessageBtn') {
+                    button.textContent = 'Send Message';
+                } else if (buttonId === 'applySettingsBtn') {
+                    button.textContent = 'Apply Settings';
+                }
+            }
+        }
+
+        // Enhanced error handling for network requests
+        function handleNetworkError(error, action) {
+            console.error(`Error ${action}:`, error);
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                showAlert('Network connection error. Please check your connection.', 'error');
+            } else {
+                showAlert(`Error ${action}. Please try again.`, 'error');
+            }
+        }
+
+        // Improved status display with more detailed information
+        function updateDetailedStatus(status) {
+            // Update basic status
+            updateStatusDisplay(status);
+            
+            // Add additional status information
+            if (status.last_update) {
+                const lastUpdateTime = new Date(status.last_update);
+                const now = new Date();
+                const diffMinutes = Math.floor((now - lastUpdateTime) / (1000 * 60));
+                
+                let updateText = '';
+                if (diffMinutes < 1) {
+                    updateText = 'Just now';
+                } else if (diffMinutes < 60) {
+                    updateText = `${diffMinutes} min ago`;
+                } else {
+                    const diffHours = Math.floor(diffMinutes / 60);
+                    updateText = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+                }
+                
+                document.getElementById('lastUpdate').textContent = updateText;
+            }
+        }
+
+        // Add validation for form inputs
+        function validateInputs() {
+            const messageInput = document.getElementById('messageInput');
+            const boardSelect = document.getElementById('boardSelect');
+            
+            // Validate message length
+            messageInput.addEventListener('input', function() {
+                if (this.value.length > 200) {
+                    this.value = this.value.substring(0, 200);
+                    showAlert('Message truncated to 200 characters', 'warning');
+                }
+            });
+            
+            // Validate board selection
+            boardSelect.addEventListener('change', function() {
+                if (this.value) {
+                    document.getElementById('updateDisplayBtn').disabled = false;
+                } else {
+                    document.getElementById('updateDisplayBtn').disabled = true;
+                }
+            });
+        }
+
+        // Initialize validation when DOM is ready
+        document.addEventListener('DOMContentLoaded', function() {
+            validateInputs();
+        });
+
+        // Add auto-save for settings
+        function autoSaveSettings() {
+            const refreshInterval = document.getElementById('refreshInterval').value;
+            const autoMode = document.getElementById('autoModeCheckbox').checked;
+            
+            localStorage.setItem('monitor_controller_settings', JSON.stringify({
+                refreshInterval: refreshInterval,
+                autoMode: autoMode,
+                selectedSection: selectedSection
+            }));
+        }
+
+        // Load saved settings on page load
+        function loadSavedSettings() {
+            try {
+                const saved = localStorage.getItem('monitor_controller_settings');
+                if (saved) {
+                    const settings = JSON.parse(saved);
+                    
+                    if (settings.refreshInterval) {
+                        document.getElementById('refreshInterval').value = settings.refreshInterval;
+                    }
+                    
+                    if (settings.autoMode !== undefined) {
+                        document.getElementById('autoModeCheckbox').checked = settings.autoMode;
+                    }
+                    
+                    if (settings.selectedSection) {
+                        selectSection(settings.selectedSection);
+                    }
+                }
+            } catch (error) {
+                console.warn('Could not load saved settings:', error);
+            }
+        }
+
+        // Auto-save when settings change
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSavedSettings();
+            
+            document.getElementById('refreshInterval').addEventListener('change', autoSaveSettings);
+            document.getElementById('autoModeCheckbox').addEventListener('change', autoSaveSettings);
+        });
+
+        // Add confirmation for important actions
+        function confirmAction(message, callback) {
+            if (confirm(message)) {
+                callback();
+            }
+        }
+
+        // Enhanced update display with confirmation
+        function updateMonitorDisplayWithConfirmation() {
+            if (!selectedBoard || !selectedSection) {
+                showAlert('Please select a board and section first', 'warning');
+                return;
+            }
+            
+            const boardSelect = document.getElementById('boardSelect');
+            const boardTitle = boardSelect.options[boardSelect.selectedIndex]?.text || 'Unknown board';
+            const sectionNames = {
+                'today_assembly': 'Today Assembly + Plans',
+                'tomorrow_assembly': 'Tomorrow Assembly Plan',
+                'next_day_assembly': 'Next Day Assembly Plan',
+                'critical_parts': 'Critical Parts Status',
+                'afm_plans': 'AFM Plans',
+                'spd_plans': 'SPD Customer Plans'
+            };
+            
+            const message = `Update monitor to display:\n${sectionNames[selectedSection]}\nFrom: ${boardTitle}\n\nContinue?`;
+            
+            confirmAction(message, updateMonitorDisplay);
+        }
+
+        // Update the button click handler to use confirmation
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('updateDisplayBtn').removeEventListener('click', updateMonitorDisplay);
+            document.getElementById('updateDisplayBtn').addEventListener('click', updateMonitorDisplayWithConfirmation);
+        });
+
+        // Add visual feedback for successful operations
+        function showSuccessAnimation(elementId) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.style.transform = 'scale(1.05)';
+                element.style.transition = 'transform 0.2s ease';
+                
+                setTimeout(() => {
+                    element.style.transform = 'scale(1)';
+                }, 200);
+            }
+        }
+
+        // Add connection status monitoring
+        let connectionCheckCount = 0;
+        const maxConnectionChecks = 5;
+
+        function enhancedCheckMonitorStatus() {
+            fetch('/planning/api/monitor/status/')
+                .then(response => {
+                    if (response.ok) {
+                        connectionCheckCount = 0; // Reset on successful connection
+                        return response.json();
+                    } else {
+                        throw new Error(`HTTP ${response.status}`);
+                    }
+                })
+                .then(data => {
+                    updateDetailedStatus(data);
+                })
+                .catch(error => {
+                    connectionCheckCount++;
+                    console.error('Error checking monitor status:', error);
+                    
+                    if (connectionCheckCount >= maxConnectionChecks) {
+                        showAlert('Lost connection to monitor system', 'error');
+                        updateMonitorConnectionStatus('disconnected');
+                    } else {
+                        updateMonitorConnectionStatus('disconnected');
+                    }
+                });
+        }
+
+        // Replace the basic status checking with enhanced version
+        function startEnhancedStatusChecking() {
+            statusCheckInterval = setInterval(enhancedCheckMonitorStatus, 10000);
+            enhancedCheckMonitorStatus(); // Initial check
+        }
+
+        // Initialize enhanced features
+        document.addEventListener('DOMContentLoaded', function() {
+            // Replace basic status checking
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+            }
+            startEnhancedStatusChecking();
+        });
+    </script>
+</body>
+</html>

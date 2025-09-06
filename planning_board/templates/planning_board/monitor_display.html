@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Production Monitor Display</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --excellent: #10b981;
+            --good: #84cc16;
+            --critical: #ef4444;
+            --gray-900: #0f172a;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--gray-900) 0%, #1e293b 100%);
+            color: white;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+
+        .monitor-container {
+            height: 100vh;
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Minimal Header */
+        .monitor-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+            color: white;
+            padding: 0.3rem 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+            height: 40px;
+            font-size: 0.7rem;
+        }
+
+        .monitor-title {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .monitor-title h1 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        .monitor-title .subtitle {
+            font-size: 0.7rem;
+            opacity: 0.9;
+            margin-left: 0.5rem;
+        }
+
+        .monitor-status {
+            display: none;
+            align-items: center;
+            gap: 0.8rem;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 0.2rem;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 0.2rem 0.4rem;
+            border-radius: 0.2rem;
+            font-size: 0.65rem;
+        }
+
+        .status-indicator {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--success);
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.disconnected {
+            background: var(--error);
+            animation: none;
+        }
+
+        .current-time {
+            font-size: 0.75rem;
+            font-weight: 600;
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Maximized Content Area */
+        .monitor-content {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            padding: 0;
+            margin: 0;
+            min-height: 0;
+        }
+
+        .content-header {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-shrink: 0;
+            background: rgba(0, 0, 0, 0.2);
+            gap: 50px;
+        }
+
+        .section-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: white;
+        }
+
+        .data-stats {
+            display: flex;
+            gap: 0.8rem;
+            align-items: center;
+        }
+
+        .stat-item {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 0.2rem 0.5rem;
+            border-radius: 0.2rem;
+            font-size: 0.6rem;
+        }
+
+        .stat-value {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--success);
+        }
+
+        .stat-label {
+            font-size: 0.55rem;
+            opacity: 0.8;
+            text-transform: uppercase;
+        }
+
+        /* Full Screen Data Display */
+        .data-display {
+            flex: 1;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            min-height: 0;
+            background: transparent;
+        }
+
+        .table-container {
+            height: 100%;
+            width: 100%;
+            overflow: auto;
+            margin: 0;
+            padding: 0;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.7rem;
+            margin: 0;
+            border: none;
+            background: white;
+        }
+
+        .table th {
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            padding: 0.2rem 0.1rem;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            border-right: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .table td {
+            padding: 0.05rem 0.3rem !important;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+            border-right: 1px solid rgba(0, 0, 0, 0.1);
+            color: black;
+            background: white;
+            font-size: 0.7rem;
+            vertical-align: middle;
+        }
+/* Always enforce td/th padding = 0.2rem */
+.table th, 
+.table td {
+    padding: 0.05rem !important;
+}
+
+        .table tbody tr:hover {
+            background: rgba(0, 0, 0, 0.05);
+        }
+
+        /* Multi-level headers */
+        .table th.today-header {
+            background: #dc2626;
+            color: white;
+            font-size: 0.6rem;
+            text-align: center;
+            vertical-align: middle;
+
+
+        }
+
+        .table th.tomorrow-header {
+            background: #059669;
+            color: white;
+            font-size: 0.6rem;
+        }
+
+        .table th.nextday-header {
+            background: #7c3aed;
+            color: white;
+            font-size: 0.6rem;
+        }
+
+        .table th.line-header {
+            background: #374151;
+            color: white;
+            text-align: center;
+            vertical-align: middle;
+        }
+
+        /* Bold dividers for specific columns */
+        .table th.divider-after::after,
+        .table td.divider-after::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 0;
+            background: #000;
+            z-index: 1;
+        }
+
+        .table th.divider-after,
+        .table td.divider-after {
+            position: relative;
+            border-right: 2px solid #000 !important;
+        }
+
+        /* Performance indicators - keep color coding the same */
+        .performance-excellent, .performance-good, .performance-warning, .performance-critical {
+            padding: 0.4rem 0.5rem;
+            border-radius: 0.3rem;
+            font-weight: 600;
+            text-align: center;
+            font-size: 0.65rem;
+            color: white;
+            display: block;
+            width: 100%;
+        }
+
+        .performance-excellent { background: var(--excellent); }
+        .performance-good { background: var(--good); }
+        .performance-warning { background: var(--warning); }
+        .performance-critical { 
+            background: var(--critical);
+            animation: pulse-critical 2s infinite;
+        }
+
+        @keyframes pulse-critical {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.8; }
+        }
+
+        .numeric-cell {
+            text-align: right;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-weight: 600;
+            font-size: 0.65rem;
+        }
+
+        .line-separator td {
+            height: 1px !important;
+            padding: 0 !important;
+            border: none !important;
+            background: black !important;
+        }
+
+        .line-name-cell {
+            font-weight: 700;
+            background: #f8f9fa !important;
+            border-left: 4px solid var(--primary) !important;
+            vertical-align: middle !important;
+            text-align: center !important;
+            writing-mode: vertical-lr;
+            text-orientation: mixed;
+        }
+
+        /* Loading and Error states */
+        .loading-state, .error-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: white;
+            font-size: 0.9rem;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.2);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        /* Connection overlay */
+        .connection-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: var(--error);
+            color: white;
+            padding: 0.5rem;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.8rem;
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+
+        .connection-overlay.show {
+            transform: translateY(0);
+        }
+
+        /* Minimal scrollbars */
+        .table-container::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        .table-container::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .table-container::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 1366px) {
+            .table { font-size: 0.5rem; }
+            .table th, .table td { padding: 0.05rem 0.2rem; }
+        }
+
+        @media (min-width: 1920px) {
+            .table { font-size: 0.5rem; }
+            .table th, .table td { padding: 0.05rem 0.2rem; }
+            .monitor-header { height: 45px; }
+        }
+
+        @media (min-width: 2560px) {
+            .table { font-size: 0.5rem; }
+            .table th, .table td { padding: 0.05rem 0.2rem; }
+            .monitor-header { height: 50px; }
+        }
+
+        /* No text selection */
+        .monitor-container {
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="monitor-container">
+        <!-- Connection Status Overlay -->
+        <div class="connection-overlay" id="connectionOverlay">
+            Connection Lost - Attempting to Reconnect...
+        </div>
+
+        <!-- Minimal Header -->
+        <div class="">
+            <div class="monitor-status">
+                <div class="status-item">
+                    <div class="status-indicator" id="connectionIndicator"></div>
+                    <span id="connectionStatus">Connecting...</span>
+                </div>
+                <div class="status-item">
+                    <span class="current-time" id="currentTime">--:--:--</span>
+                </div>
+                <div class="status-item">
+                    <span id="lastUpdate">Never</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Maximized Content Area -->
+        <div class="monitor-content">
+            <div class="content-header">
+                <div class="section-title" id="sectionTitle">
+                    Loading Production Data...
+                </div>
+                <div class="data-stats" id="dataStats">
+                    <!-- Stats will be populated dynamically -->
+                </div>
+            </div>
+
+            <!-- Full Screen Data Display -->
+            <div class="data-display">
+                <div class="loading-state" id="loadingState">
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Connecting to Production System...</div>
+                </div>
+                
+                <div class="table-container" id="tableContainer" style="display: none;">
+                    <!-- Table will be populated dynamically -->
+                </div>
+
+                <div class="error-state" id="errorState" style="display: none;">
+                    <div class="error-icon">⚠️</div>
+                    <h3>Connection Error</h3>
+                    <p>Unable to connect to production system</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global variables
+        let reconnectAttempts = 0;
+        let maxReconnectAttempts = 10;
+        let reconnectDelay = 3000;
+        let currentDisplayConfig = {
+            board_id: null,
+            section: 'today_assembly',
+            auto_refresh: true,
+            refresh_interval: 5000
+        };
+
+        // Initialize monitor display
+        document.addEventListener('DOMContentLoaded', function() {
+            startClock();
+            startControlPolling();
+            loadLatestBoard();
+        });
+
+        function startClock() {
+            function updateTime() {
+                const now = new Date();
+                const timeString = now.toLocaleTimeString('en-US', { 
+                    hour12: false, 
+                    hour: '2-digit', 
+                    minute: '2-digit', 
+                    second: '2-digit' 
+                });
+                document.getElementById('currentTime').textContent = timeString;
+            }
+            
+            updateTime();
+            setInterval(updateTime, 1000);
+        }
+
+        function startControlPolling() {
+            setInterval(() => {
+                fetch('/planning/api/monitor/control/')
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.command) {
+                            handleControlCommand(data.command);
+                        }
+                    })
+                    .catch(error => {
+                        console.log('Control polling error:', error);
+                    });
+            }, 2000);
+        }
+
+        function handleControlCommand(command) {
+            switch (command.action) {
+                case 'change_display':
+                    changeDisplay(command.board_id, command.section);
+                    break;
+                case 'refresh_data':
+                    refreshCurrentData();
+                    break;
+                case 'update_config':
+                    updateDisplayConfig(command.config);
+                    break;
+                case 'show_message':
+                    showMessage(command.message, command.type);
+                    break;
+            }
+        }
+
+        function loadLatestBoard() {
+            fetch('/planning/api/boards/')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.boards && data.boards.length > 0) {
+                        const latestBoard = data.boards.sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+                        currentDisplayConfig.board_id = latestBoard.id;
+                        changeDisplay(latestBoard.id, 'today_assembly');
+                    } else {
+                        showError('No planning boards available');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading boards:', error);
+                    showError('Failed to load planning boards');
+                });
+        }
+
+        function changeDisplay(boardId, section) {
+            currentDisplayConfig.board_id = boardId;
+            currentDisplayConfig.section = section;
+            
+            showLoading();
+            updateConnectionStatus('connecting');
+            
+            loadSectionData(boardId, section);
+            startAutoRefresh();
+        }
+
+        function startAutoRefresh() {
+            if (window.refreshInterval) {
+                clearInterval(window.refreshInterval);
+            }
+            
+            window.refreshInterval = setInterval(() => {
+                if (currentDisplayConfig.board_id && currentDisplayConfig.section) {
+                    loadSectionData(currentDisplayConfig.board_id, currentDisplayConfig.section);
+                }
+            }, currentDisplayConfig.refresh_interval);
+        }
+
+        function loadSectionData(boardId, section) {
+            if (section === 'today_assembly') {
+                Promise.all([
+                    fetch(`/planning/api/board/${boardId}/section/today_assembly/`),
+                    fetch(`/planning/api/board/${boardId}/section/tomorrow_assembly/`),
+                    fetch(`/planning/api/board/${boardId}/section/next_day_assembly/`)
+                ])
+                .then(responses => Promise.all(responses.map(r => r.json())))
+                .then(([todayData, tomorrowData, nextDayData]) => {
+                    const mergedData = mergeAssemblyData(todayData, tomorrowData, nextDayData);
+                    displayData(mergedData);
+                    console.log(todayData)
+                    updateConnectionStatus('connected');
+                })
+                .catch(error => {
+                    console.error('Error loading merged data:', error);
+                    showError('Failed to load assembly data');
+                });
+            } else {
+                fetch(`/planning/api/board/${boardId}/section/${section}/`)
+                    .then(response => response.json())
+                    .then(data => {
+                        displayData(data);
+                        updateConnectionStatus('connected');
+                    })
+                    .catch(error => {
+                        console.error('Error loading section data:', error);
+                        showError('Failed to load section data');
+                    });
+            }
+        }
+
+        function mergeAssemblyData(todayData, tomorrowData, nextDayData) {
+            const mergedData = {
+                title: 'Assembly Plans - Today, Tomorrow & Next Day',
+                headers: [
+                    'Line No.',
+                    // Today columns
+                    'Today A Model', 'Today A Plan', 'Today A Actual','Today A Change','Today A Remark', 'Today A Time',
+                    'Today B Model', 'Today B Plan', 'Today B Actual','Today B Change','Today B Remark', 'Today B Time',
+                    'Today C Model', 'Today C Plan', 'Today C Actual','Today C Change','Today C Remark', 'Today C Time',
+                    // Tomorrow columns
+                    'Tomorrow Model', 'Tom A', 'Tom B', 'Tom C','Remark',
+                    // Next Day columns
+                    'Next Model', 'Next A', 'Next B', 'Next C','Remark'
+                ],
+                data: [],
+                statistics: {
+                    total_lines: Math.max(
+                        (todayData.data || []).length,
+                        (tomorrowData.data || []).length,
+                        (nextDayData.data || []).length
+                    )
+                }
+            };
+
+            const todayRows = todayData.data || [];
+            const tomorrowRows = tomorrowData.data || [];
+            const nextDayRows = nextDayData.data || [];
+            
+            const maxRows = Math.max(todayRows.length, tomorrowRows.length, nextDayRows.length);
+
+            for (let i = 0; i < maxRows; i++) {
+                const todayRow = todayRows[i] || [];
+                const tomorrowRow = tomorrowRows[i] || [];
+                const nextDayRow = nextDayRows[i] || [];
+
+                const tomTotal = (parseInt(tomorrowRow[1]) || 0) + 
+                                (parseInt(tomorrowRow[2]) || 0) + 
+                                (parseInt(tomorrowRow[3]) || 0);
+
+                const nextTotal = (parseInt(nextDayRow[1]) || 0) + 
+                                 (parseInt(nextDayRow[2]) || 0) + 
+                                 (parseInt(nextDayRow[3]) || 0);
+
+                const mergedRow = [
+                    todayRow[0] || `Line ${i + 1}`,
+                    // Today data
+                    todayRow[1] || '', todayRow[2] || 0, todayRow[3] || 0, todayRow[4] || 0,todayRow[5] || '', todayRow[6] || '6:00-14:30',
+                    todayRow[7] || '', todayRow[8] || 0, todayRow[9] || 0,todayRow[10] || 0,todayRow[11] || '', todayRow[12] || '14:30-23:00',
+                    todayRow[13] || '', todayRow[14] || 0, todayRow[15] || 0,todayRow[16] || 0,todayRow[17] || '', todayRow[18] || '23:00-06:00',
+                    // Tomorrow data
+                    tomorrowRow[0] || '', tomorrowRow[1] || 0, tomorrowRow[2] || 0, tomorrowRow[3] || 0,tomorrowRow[5] || '',
+                    // Next day data
+                    nextDayRow[0] || '', nextDayRow[1] || 0, nextDayRow[2] || 0, nextDayRow[3] || 0, nextDayRow[5] ||''
+                ];
+
+                mergedData.data.push(mergedRow);
+            }
+
+            return mergedData;
+        }
+
+        function displayData(data) {
+            hideLoading();
+            hideError();
+            
+            document.getElementById('sectionTitle').textContent = data.title || 'Production Data';
+            
+            const sectionIcons = {
+                'today_assembly': '📋',
+                'tomorrow_assembly': '📅', 
+                'next_day_assembly': '⏭️',
+                'critical_parts': '⚠️',
+                'afm_plans': '🔧',
+                'spd_plans': '🏢',
+                'other_info': '📝'
+            };
+             
+            updateDataStats(data.statistics || {});
+            
+            if (data.data && data.data.length > 0) {
+                displayTable(data.headers, data.data);
+            } else {
+                showNoData();
+            }
+            
+            updateLastUpdate();
+        }
+
+        function updateDataStats(stats) {
+            const statsContainer = document.getElementById('dataStats');
+            let statsHtml = '';
+            
+            if (stats.total_plan && stats.total_actual) {
+                const efficiency = Math.round((stats.total_actual / stats.total_plan) * 100);
+                statsHtml += `
+                    <div class="stat-item">
+                        <div class="stat-value">${efficiency}%</div>
+                        <div class="stat-label">Efficiency</div>
+                    </div>
+                `;
+            }
+            
+            if (stats.lines_on_target !== undefined) {
+                statsHtml += `
+                    <div class="stat-item">
+                        <div class="stat-value">${stats.lines_on_target}</div>
+                        <div class="stat-label">On Target</div>
+                    </div>
+                `;
+            }
+
+            // Add current time
+            const currentTime = new Date().toLocaleTimeString([], { 
+                hour: '2-digit', 
+                minute: '2-digit', 
+                hour12: true 
+            });
+            statsHtml += `
+                <div class="stat-item">
+                    <div class="stat-value">${currentTime}</div>
+
+                </div>
+                            <button class="fullscreen-btn" onclick="toggleFullscreen(this)">
+                                🔲
+                            </button>
+
+                `;
+    
+            statsContainer.innerHTML = statsHtml;
+        }
+
+        // Function to toggle fullscreen
+function toggleFullscreen(element) {
+    if (!document.fullscreenElement) {
+        document.documentElement.requestFullscreen();  // make whole page fullscreen
+        element.textContent = "❎"; // change icon when fullscreen
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+            element.textContent = "🔲"; // reset icon
+        }
+    }
+}
+
+        function groupDataByLine(data) {
+            const groups = {};
+            
+            data.forEach((row, index) => {
+                const fullName = row[0];
+                const baseName = extractLineName(fullName);
+                
+                if (!groups[baseName]) {
+                    groups[baseName] = [];
+                }
+                
+                groups[baseName].push({ row, index });
+            });
+            
+            return groups;
+        }
+
+        function displayTable(headers, data) {
+            const isMergedView = headers.includes('Today A Model');
+            let tableHtml = `<table class="table"><thead>`;
+            
+            // Define divider column indices - after Today C Time (12), Tom Total (17), Next Total (22)
+            const dividerColumns = [5, 11, 17, 22,]; // 0-based indices
+            
+            if (isMergedView) {
+                // Multi-level headers for merged view
+                tableHtml += `
+                    <tr>
+                        <th rowspan="2" class="line-header">Line</th>
+                        <th colspan="18" class="today-header">TODAY ASSY PLAN</th>
+                        <th colspan="5" class="tomorrow-header">TOMORROW ASSY PLAN</th>
+                        <th colspan="5" class="nextday-header">DAY AFTER NEXT ASSY PLAN</th>
+                    </tr>
+                    <tr>
+                `;
+                
+                // Today sub-headers
+                const todaySubHeaders = [' Model', ' Plan', ' Actual',' Change',' Remarks', ' Time', 
+                                        ' Model', ' Plan', ' Actual',' Change',' Remarks', ' Time',
+                                        ' Model', ' Plan', ' Actual',' Change',' Remarks', ' Time'];
+                    todaySubHeaders.forEach((header, index) => {
+                    const dividerClass = dividerColumns.includes(index) ? ' divider-after' : '';
+                    tableHtml += `<th class="today-header${dividerClass}">${header}</th>`;
+                });
+                
+                const tomorrowSubHeaders = ['Model', 'A', 'B', 'C','Remark'];
+                tomorrowSubHeaders.forEach((header, index) => {
+                    const actualIndex = index + 18; // Offset by today columns
+                    const dividerClass = dividerColumns.includes(actualIndex) ? ' divider-after' : '';
+                    tableHtml += `<th class="tomorrow-header${dividerClass}">${header}</th>`;
+                });
+                
+                const nextDaySubHeaders = ['Model', 'A', 'B', 'C','Remark'];
+                nextDaySubHeaders.forEach((header, index) => {
+                    const actualIndex = index  // Offset by today + tomorrow columns
+                    const dividerClass = dividerColumns.includes(actualIndex) ? ' divider-after' : '';
+                    tableHtml += `<th class="nextday-header${dividerClass}">${header}</th>`;
+                });
+                
+                tableHtml += '</tr>';
+            } else {
+                tableHtml += '<tr>';
+                headers.forEach((header, index) => {
+                    const dividerClass = dividerColumns.includes(index) ? ' divider-after' : '';
+                    tableHtml += `<th class="${dividerClass}">${header}</th>`;
+                });
+                tableHtml += '</tr>';
+            }
+            
+            tableHtml += '</thead><tbody>';
+            
+            // Group data by line name for rowspan
+            const lineGroups = groupDataByLine(data);
+            
+            Object.entries(lineGroups).forEach(([lineName, entries]) => {
+                entries.forEach((entry, entryIndex) => {
+                    const row = entry.row;
+                    tableHtml += '<tr>';
+                    
+                    row.forEach((cell, cellIndex) => {
+                        if (cellIndex === 0) {
+                            // Line name column - only show for first entry of each line
+                            if (entryIndex === 0) {
+                                tableHtml += `<td class="line-name-cell" rowspan="${entries.length}">${lineName}</td>`;
+                            }
+                        } else {
+                            let cellContent = cell === null || cell === undefined || cell === '' ? '-' : cell;
+                            let cellClass = '';
+                            const dividerClass = dividerColumns.includes(cellIndex - 1) ? ' divider-after' : '';
+                            
+                            if (isMergedView && cellIndex >= 1 && cellIndex <= 12) {
+                                cellClass = 'numeric-cell' + dividerClass;
+                                // Performance indicators for actual columns
+                                if (cellIndex === 3 || cellIndex === 7 || cellIndex === 11) {
+                                    const planIndex = cellIndex - 1;
+                                    const planValue = parseFloat(row[planIndex]);
+                                    const actualValue = parseFloat(cell);
+                                    
+                                    if (!isNaN(planValue) && !isNaN(actualValue) && planValue > 0) {
+                                        const percentage = (actualValue / planValue) * 100;
+                                        let performanceClass = '';
+                                        
+                                        if (percentage >= 110) performanceClass = 'performance-excellent';
+                                        else if (percentage >= 90) performanceClass = 'performance-good';
+                                        else if (percentage >= 70) performanceClass = 'performance-warning';
+                                        else performanceClass = 'performance-critical';
+                                        
+                                        cellContent = `<div class="${performanceClass}">${formatNumber(actualValue)}</div>`;
+                                    }
+                                }
+                            } else if (!isNaN(parseFloat(cell)) && isFinite(cell)) {
+                                cellClass = 'numeric-cell' + dividerClass;
+                                cellContent = formatNumber(cell);
+                            } else {
+                                cellClass = dividerClass;
+                            }
+                            
+                            tableHtml += `<td class="${cellClass}">${cellContent}</td>`;
+                        }
+                    });
+                    
+                    tableHtml += '</tr>';
+                });
+                
+                // Add line separator after each line group except the last one
+                const lineNames = Object.keys(lineGroups);
+                if (lineName !== lineNames[lineNames.length - 1]) {
+                    tableHtml += `
+                        <tr class="line-separator">
+                            <td colspan="${headers.length}"></td>
+                        </tr>
+                    `;
+                }
+            });
+            
+            tableHtml += '</tbody></table>';
+            
+            document.getElementById('tableContainer').innerHTML = tableHtml;
+            document.getElementById('tableContainer').style.display = 'block';
+        }
+
+        function extractLineName(fullName) {
+            if (!fullName || typeof fullName !== 'string') return '';
+            const match = fullName.match(/^(.+?)(\s*-\s*Entry\s*\d+)?$/i);
+            return match ? match[1].trim() : fullName.trim();
+        }
+
+        function formatNumber(value) {
+            const num = parseFloat(value);
+            if (isNaN(num)) return value;
+            
+            if (Math.abs(num) >= 1000) {
+                return num.toLocaleString();
+            }
+            
+            return num.toString();
+        }
+
+        function showLoading() {
+            document.getElementById('loadingState').style.display = 'flex';
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('errorState').style.display = 'none';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingState').style.display = 'none';
+        }
+
+        function showError(message) {
+            document.getElementById('errorState').style.display = 'flex';
+            document.getElementById('errorState').querySelector('p').textContent = message;
+            document.getElementById('tableContainer').style.display = 'none';
+            document.getElementById('loadingState').style.display = 'none';
+        }
+
+        function hideError() {
+            document.getElementById('errorState').style.display = 'none';
+        }
+
+        function showNoData() {
+            document.getElementById('tableContainer').innerHTML = `
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: rgba(0,0,0,0.7);">
+                    <div style="font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5;">📋</div>
+                    <h3>No Data Available</h3>
+                    <p>Waiting for production data...</p>
+                </div>
+            `;
+            document.getElementById('tableContainer').style.display = 'block';
+        }
+
+        function updateConnectionStatus(status) {
+            const indicator = document.getElementById('connectionIndicator');
+            const statusText = document.getElementById('connectionStatus');
+            const overlay = document.getElementById('connectionOverlay');
+            
+            indicator.className = 'status-indicator';
+            
+            if (status === 'connected') {
+                statusText.textContent = 'Live';
+                overlay.classList.remove('show');
+            } else if (status === 'connecting') {
+                statusText.textContent = 'Connecting...';
+                overlay.classList.remove('show');
+            } else {
+                indicator.classList.add('disconnected');
+                statusText.textContent = 'Disconnected';
+                overlay.classList.add('show');
+            }
+        }
+
+        function updateLastUpdate() {
+            const now = new Date();
+            document.getElementById('lastUpdate').textContent = `${now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' })}`;
+        }
+
+        function refreshCurrentData() {
+            if (currentDisplayConfig.board_id && currentDisplayConfig.section) {
+                loadSectionData(currentDisplayConfig.board_id, currentDisplayConfig.section);
+            }
+        }
+
+        function updateDisplayConfig(config) {
+            Object.assign(currentDisplayConfig, config);
+            if (config.refresh_interval) {
+                startAutoRefresh();
+            }
+        }
+
+        function showMessage(message, type = 'info') {
+            const messageDiv = document.createElement('div');
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                background:green;
+                color: white;
+                padding: 1rem 2rem;
+                border-radius: 0.5rem;
+                font-size: 1rem;
+                font-weight: 600;
+                z-index: 10000;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            `;
+            messageDiv.textContent = message;
+            
+            document.body.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                if (document.body.contains(messageDiv)) {
+                    document.body.removeChild(messageDiv);
+                }
+            }, 3000);
+        }
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (window.refreshInterval) {
+                clearInterval(window.refreshInterval);
+            }
+        });
+
+        // Handle page visibility changes
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                if (window.refreshInterval) {
+                    clearInterval(window.refreshInterval);
+                }
+            } else {
+                if (currentDisplayConfig.board_id && currentDisplayConfig.section) {
+                    startAutoRefresh();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

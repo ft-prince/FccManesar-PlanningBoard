@@ -42,5 +42,16 @@ urlpatterns = [
     path('display/<int:board_id>/<str:section>/', views.fullscreen_display, name='fullscreen_display'),
     path('api/display/<int:board_id>/<str:section>/stream/', views.fullscreen_data_stream, name='fullscreen_stream'),
 
+
+
+#  new update
+    path('monitor/display/', views.monitor_display, name='monitor_display'),
+    path('monitor/controller/', views.monitor_controller, name='monitor_controller'),
+    
+    # Monitor API endpoints
+    path('api/monitor/control/', views.monitor_control_api, name='monitor_control_api'),
+    path('api/monitor/status/', views.monitor_status_api, name='monitor_status_api'),
+    path('api/monitor/<int:board_id>/<str:section>/stream/', views.monitor_data_stream, name='monitor_data_stream'),
+
 ]
 

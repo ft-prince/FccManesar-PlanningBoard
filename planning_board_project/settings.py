@@ -25,7 +25,7 @@ SECRET_KEY = "django-insecure-krsk46687m@4((x1itv-7o-otfk)3uwb!zx5$j9__ntrsnujbk
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -38,6 +38,8 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
         'planning_board',
+            'channels',
+
 
 ]
 

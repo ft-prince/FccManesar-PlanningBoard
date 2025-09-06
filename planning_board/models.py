@@ -55,7 +55,7 @@ class ProductionLine(models.Model):
     c_shift_remarks = models.TextField(blank=True)
     
     class Meta:
-        ordering = ['line_number']
+        ordering = []
     
     def __str__(self):
         return f"{self.line_number} - {self.planning_board.today_date}"
